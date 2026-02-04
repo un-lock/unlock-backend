@@ -1,71 +1,77 @@
-﻿# ?뵑 un:lock Database Schema Design
+# 🔓 un:lock - 우리만의 은밀한 대화
 
-??臾몄꽌??'un:lock' ?꾨줈?앺듃??PostgreSQL ?곗씠?곕쿋?댁뒪 ?ㅺ퀎 諛??뷀떚??援ъ“瑜??ㅻ챸?⑸땲??
-
----
-
-## 1. ERD 援ъ“ (媛쒕뀗??
-
-- **Users**: ?쒕퉬???댁슜???뺣낫 (移댁뭅???곕룞)
-- **Couples**: 1:1 ?ъ슜??留ㅼ묶 ?뺣낫
-- **Questions**: ?쇱씪 吏덈Ц ??μ냼
-- **Answers**: 吏덈Ц??????ъ슜?먯쓽 ?듬? 諛??대엺 ?곹깭
+커플들이 하루에 한 번 제공되는 19금 질문에 답변하며 서로의 깊은 취향을 알아가는 서비스입니다.
 
 ---
 
-## 2. ?뚯씠釉??곸꽭 ?ㅺ퀎
+## 🛠 Tech Stack
+- **Language**: Java 21
+- **Framework**: Spring Boot 4.0.2
+- **Database**: PostgreSQL, Redis
+- **Infrastructure**: Docker, Nginx (Load Balancing)
+- **Auth**: JWT, OAuth2 (Kakao, Google, Apple)
 
-### 2.1. users
-| 而щ읆紐?| ???| ?쒖빟?ы빆 | ?ㅻ챸 |
+---
+
+## 🗄 Database Schema Design
+
+### 1. ERD 구조 (개념적)
+- **Users**: 서비스 이용자 정보 (카카오, 구글, 애플, 이메일 연동)
+- **Couples**: 1:1 사용자 매칭 및 알림 시간 설정
+- **Questions**: 일일 질문 저장소
+- **Answers**: 질문에 대한 사용자의 답변 및 열람 상태
+
+### 2. 테이블 상세 설계
+
+#### 2.1. users
+| 컬럼명 | 타입 | 제약사항 | 설명 |
 | :--- | :--- | :--- | :--- |
-| id | BIGSERIAL | PRIMARY KEY | 怨좎쑀 ?앸퀎??|
-| social_id | VARCHAR | - | ?뚯뀥 濡쒓렇??怨좎쑀 ?앸퀎??|
-| nickname | VARCHAR | NOT NULL | ?ъ슜???됰꽕??|
-| email | VARCHAR | UNIQUE, NOT NULL | ?대찓??(濡쒓렇??ID 寃몄슜) |
-| password | VARCHAR | - | ?대찓??濡쒓렇?몄슜 鍮꾨?踰덊샇 |
+| id | BIGSERIAL | PRIMARY KEY | 고유 식별자 |
+| social_id | VARCHAR | - | 소셜 로그인 고유 식별자 |
+| nickname | VARCHAR | NOT NULL | 사용자 닉네임 |
+| email | VARCHAR | UNIQUE, NOT NULL | 이메일 (로그인 ID 겸용) |
+| password | VARCHAR | - | 이메일 로그인용 비밀번호 |
 | provider | VARCHAR | NOT NULL | KAKAO, GOOGLE, APPLE, EMAIL |
-| couple_id | BIGINT | FOREIGN KEY | ?뚯냽 而ㅽ뵆 ID |
-| created_at | TIMESTAMP | NOT NULL | ?앹꽦??|
-| updated_at | TIMESTAMP | NOT NULL | ?섏젙??|
+| couple_id | BIGINT | FOREIGN KEY | 소속 커플 ID |
+| created_at | TIMESTAMP | NOT NULL | 생성일 |
+| updated_at | TIMESTAMP | NOT NULL | 수정일 |
 
-### 2.2. couples
-| 而щ읆紐?| ???| ?쒖빟?ы빆 | ?ㅻ챸 |
+#### 2.2. couples
+| 컬럼명 | 타입 | 제약사항 | 설명 |
 | :--- | :--- | :--- | :--- |
-| id | BIGSERIAL | PRIMARY KEY | 怨좎쑀 ?앸퀎??|
-| user1_id | BIGINT | UNIQUE, FK | ?ъ슜??1 ID |
-| user2_id | BIGINT | UNIQUE, FK | ?ъ슜??2 ID |
-| start_date | DATE | NOT NULL | 而ㅽ뵆 ?쒖옉??|
-| notification_time | TIME | NOT NULL, DEFAULT '22:00' | ?쇱씪 吏덈Ц ?뚮┝ ?쒓컙 |
-| created_at | TIMESTAMP | NOT NULL | ?앹꽦??|
-| updated_at | TIMESTAMP | NOT NULL | ?섏젙??|
+| id | BIGSERIAL | PRIMARY KEY | 고유 식별자 |
+| user1_id | BIGINT | UNIQUE, FK | 사용자 1 ID |
+| user2_id | BIGINT | UNIQUE, FK | 사용자 2 ID |
+| start_date | DATE | NOT NULL | 커플 시작일 |
+| notification_time | TIME | NOT NULL, DEFAULT '22:00' | 일일 질문 알림 시간 |
+| created_at | TIMESTAMP | NOT NULL | 생성일 |
+| updated_at | TIMESTAMP | NOT NULL | 수정일 |
 
-### 2.3. questions
-| 而щ읆紐?| ???| ?쒖빟?ы빆 | ?ㅻ챸 |
+#### 2.3. questions
+| 컬럼명 | 타입 | 제약사항 | 설명 |
 | :--- | :--- | :--- | :--- |
-| id | BIGSERIAL | PRIMARY KEY | 怨좎쑀 ?앸퀎??|
-| content | TEXT | NOT NULL | 吏덈Ц ?댁슜 |
-| active_date | DATE | UNIQUE, NOT NULL | 吏덈Ц ?몄텧 ?좎쭨 (留ㅼ씪 ?섎굹) |
-| created_at | TIMESTAMP | NOT NULL | ?앹꽦??|
-| updated_at | TIMESTAMP | NOT NULL | ?섏젙??|
+| id | BIGSERIAL | PRIMARY KEY | 고유 식별자 |
+| content | TEXT | NOT NULL | 질문 내용 |
+| active_date | DATE | UNIQUE, NOT NULL | 질문 노출 날짜 (매일 하나) |
+| created_at | TIMESTAMP | NOT NULL | 생성일 |
+| updated_at | TIMESTAMP | NOT NULL | 수정일 |
 
-### 2.4. answers
-| 而щ읆紐?| ???| ?쒖빟?ы빆 | ?ㅻ챸 |
+#### 2.4. answers
+| 컬럼명 | 타입 | 제약사항 | 설명 |
 | :--- | :--- | :--- | :--- |
-| id | BIGSERIAL | PRIMARY KEY | 怨좎쑀 ?앸퀎??|
-| question_id | BIGINT | FOREIGN KEY | 吏덈Ц ID |
-| user_id | BIGINT | FOREIGN KEY | ?묒꽦??ID |
-| content | TEXT | NOT NULL | ?듬? ?댁슜 |
-| is_revealed | BOOLEAN | DEFAULT FALSE | ?뚰듃???듬? ?대엺沅??띾뱷 ?щ? |
-| created_at | TIMESTAMP | NOT NULL | ?앹꽦??|
-| updated_at | TIMESTAMP | NOT NULL | ?섏젙??|
+| id | BIGSERIAL | PRIMARY KEY | 고유 식별자 |
+| question_id | BIGINT | FOREIGN KEY | 질문 ID |
+| user_id | BIGINT | FOREIGN KEY | 작성자 ID |
+| content | TEXT | NOT NULL | 답변 내용 |
+| is_revealed | BOOLEAN | DEFAULT FALSE | 파트너 답변 열람권 획득 여부 |
+| created_at | TIMESTAMP | NOT NULL | 생성일 |
+| updated_at | TIMESTAMP | NOT NULL | 수정일 |
 
 ---
 
-## 3. ?듭떖 鍮꾩쫰?덉뒪 洹쒖튃 ?쒖빟
+## 🔑 핵심 비즈니스 규칙
 
-1. **而ㅽ뵆 ?쒖빟**: ??紐낆쓽 ?좎???諛섎뱶???섎굹??`couple_id`留?媛吏????덉쑝硫? `couples` ?뚯씠釉붿쓽 `user1_id`? `user2_id`???쒕줈 ?좊땲?ы빐???⑸땲??
-2. **吏덈Ц ?몄텧**: `questions.active_date`??以묐났?????놁쑝硫? API ?몄텧 ???꾩옱 ?좎쭨(`LocalDate.now()`)???대떦?섎뒗 吏덈Ц??諛섑솚?⑸땲??
-3. **?듬? ?대엺**: 
-   - ?ъ슜?먭? ?듬?????ν븷 ??`is_revealed`??湲곕낯?곸쑝濡?`false`?낅땲??
-   - 愿묎퀬 ?쒖껌 ?먮뒗 寃곗젣 API媛 ?깃났?곸쑝濡?泥섎━?섎㈃ `is_revealed`瑜?`true`濡??낅뜲?댄듃?⑸땲??
-   - ?뚰듃?덉쓽 ?듬???議고쉶?섎뒗 API??`蹂몄씤???듬? 議댁옱 ?щ?`? `is_revealed == true` 議곌굔??紐⑤몢 留뚯”?댁빞 ?ㅼ젣 ?곗씠?곕? 諛섑솚?⑸땲??
+1. **커플 매칭**: 초대 코드를 통해 1:1 연결되며, 한 유저는 하나의 커플에만 속할 수 있습니다.
+2. **질문 노출**: 매일 지정된 시간(또는 자정)에 새로운 질문이 활성화됩니다.
+3. **답변 잠금**: 본인이 답변을 완료해야만 파트너의 답변을 볼 수 있는 권한이 생깁니다.
+4. **콘텐츠 열람**: 파트너의 답변을 최종 확인하려면 광고 시청 또는 유료 결제가 필요합니다.
