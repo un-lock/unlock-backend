@@ -41,10 +41,6 @@ public class Answer extends BaseTimeEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // 답변 작성자
 
-        @Column(nullable = false, columnDefinition = "TEXT")
-
-        private String content; // 답변 내용
-
-    }
-
-    
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content; // 답변 내용
+}

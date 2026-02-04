@@ -43,26 +43,14 @@ public class Couple extends BaseTimeEntity {
     @JoinColumn(name = "user2_id")
     private User user2; // 커플을 맺은 사용자 2
 
-        @Column(nullable = false)
+    @Column(nullable = false)
+    private LocalDate startDate; // 커플 시작일 (연결된 날짜)
 
-        private LocalDate startDate; // 커플 시작일 (연결된 날짜)
+    @Builder.Default
+    @Column(nullable = false)
+    private LocalTime notificationTime = LocalTime.of(22, 0); // 질문 알림 시간 (기본값 오후 10시)
 
-    
-
-        @Builder.Default
-
-        @Column(nullable = false)
-
-        private LocalTime notificationTime = LocalTime.of(22, 0); // 질문 알림 시간 (기본값 오후 10시)
-
-    
-
-        @Builder.Default
-
-        @Column(nullable = false)
-
-        private boolean isSubscribed = false; // 프리미엄 구독 여부 (true인 경우 광고 없이 답변 열람 가능)
-
-    }
-
-    
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isSubscribed = false; // 프리미엄 구독 여부 (true인 경우 광고 없이 답변 열람 가능)
+}
