@@ -1,0 +1,25 @@
+spring.application.name=unlock-backend
+
+# DB Setup (PostgreSQL)
+spring.datasource.url=jdbc:postgresql://localhost:5432/your_db
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# Redis Setup
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# Google Mail (SMTP) Setup
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-google-app-password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+
+# JWT Setup
+jwt.secret=your-very-long-and-secure-random-secret-key-here
+jwt.expiration-ms=3600000
