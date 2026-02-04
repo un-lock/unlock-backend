@@ -31,10 +31,15 @@ public class EmailService {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
             message.setSubject("[un:lock] 인증번호 안내");
-            message.setText("안녕하세요. un:lock 입니다.
-
-인증번호는 [" + verificationCode + "] 입니다.
-3분 이내에 입력해 주세요.");
+            
+            String content = """
+                    안녕하세요. un:lock 입니다.
+                    
+                    인증번호는 [%s] 입니다.
+                    3분 이내에 입력해 주세요.
+                    """.formatted(verificationCode);
+            
+            message.setText(content);
             
             mailSender.send(message);
             
