@@ -70,4 +70,8 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    public long getRefreshTokenValidityInMilliseconds() {
+        return refreshTokenValidityInMilliseconds;
+    }
 }

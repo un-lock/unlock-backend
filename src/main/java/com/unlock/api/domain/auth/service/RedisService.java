@@ -40,4 +40,30 @@ public class RedisService {
     public void deleteVerificationCode(String email) {
         redisTemplate.delete("AUTH:" + email);
     }
+
+    /**
+     * Refresh Token 저장
+     */
+    public void saveRefreshToken(Long userId, String refreshToken, long expirationTime) {
+        redisTemplate.opsForValue().set(
+                "RT:" + userId,
+                refreshToken,
+                expirationTime,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    /**
+     * Refresh Token 조회
+     */
+    public String getRefreshToken(Long userId) {
+        return redisTemplate.opsForValue().get("RT:" + userId);
+    }
+
+    /**
+     * Refresh Token 삭제 (로그아웃 시)
+     */
+    public void deleteRefreshToken(Long userId) {
+        redisTemplate.delete("RT:" + userId);
+    }
 }
