@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class ApiResponse<T> {
 
     private boolean success; // 요청 성공 여부
+    private String code;     // 내부 에러 코드 (성공 시 "COMMON_000")
     private String message;  // 응답 메시지 (성공 시 "성공", 실패 시 에러 메시지)
     private T data;          // 실제 응답 데이터
 
@@ -24,20 +25,20 @@ public class ApiResponse<T> {
      * 성공 응답 생성 (데이터 포함)
      */
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "성공", data);
+        return new ApiResponse<>(true, "COMMON_000", "성공", data);
     }
 
     /**
      * 성공 응답 생성 (메시지와 데이터 포함)
      */
     public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(true, message, data);
+        return new ApiResponse<>(true, "COMMON_000", message, data);
     }
 
     /**
      * 에러 응답 생성
      */
-    public static ApiResponse<Void> error(String message) {
-        return new ApiResponse<>(false, message, null);
+    public static ApiResponse<Void> error(String code, String message) {
+        return new ApiResponse<>(false, code, message, null);
     }
 }

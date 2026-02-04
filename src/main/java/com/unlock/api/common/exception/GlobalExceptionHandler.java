@@ -20,11 +20,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
-        log.error("BusinessException: {}", e.getErrorCode().getMessage());
         ErrorCode errorCode = e.getErrorCode();
+        log.error("BusinessException: code={}, message={}", errorCode.getCode(), errorCode.getMessage());
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(ApiResponse.error(errorCode.getMessage()));
+                .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
     }
 
     /**
@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
         log.error("MethodArgumentNotValidException: {}", e.getMessage());
         return ResponseEntity
                 .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
-                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getMessage()));
+                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), ErrorCode.INVALID_INPUT_VALUE.getMessage()));
     }
 
     /**
@@ -46,6 +46,6 @@ public class GlobalExceptionHandler {
         log.error("Exception: ", e);
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
+                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
     }
 }
