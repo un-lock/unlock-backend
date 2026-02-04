@@ -20,6 +20,10 @@ public enum ErrorCode {
     // User & Couple (사용자/커플 관련: U, CP로 시작)
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     COUPLE_NOT_FOUND(HttpStatus.NOT_FOUND, "CP001", "연결된 커플 정보를 찾을 수 없습니다."),
+    INVALID_INVITE_CODE(HttpStatus.BAD_REQUEST, "CP002", "유효하지 않은 초대 코드입니다."),
+    ALREADY_CONNECTED(HttpStatus.BAD_REQUEST, "CP003", "이미 커플이 연결되어 있습니다."),
+    CANNOT_CONNECT_SELF(HttpStatus.BAD_REQUEST, "CP004", "자기 자신과는 연결할 수 없습니다."),
+    PARTNER_ALREADY_CONNECTED(HttpStatus.BAD_REQUEST, "CP005", "상대방이 이미 다른 커플과 연결되어 있습니다."),
     
     // Question & Answer (질문/답변 관련: Q, A로 시작)
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Q001", "질문을 찾을 수 없습니다."),
