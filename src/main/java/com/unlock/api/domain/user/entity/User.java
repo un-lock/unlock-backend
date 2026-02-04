@@ -35,9 +35,19 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private AuthProvider provider; // 인증 제공자 (KAKAO, GOOGLE, APPLE, EMAIL)
 
+    @Column(unique = true)
+    private String inviteCode; // 커플 연결을 위한 초대 코드
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "couple_id")
     private Couple couple; // 소속된 커플 정보
+
+    /**
+     * 초대 코드 설정
+     */
+    public void setInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
+    }
 
     /**
      * 커플 연결 설정
