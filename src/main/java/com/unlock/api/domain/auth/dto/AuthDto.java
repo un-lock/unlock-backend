@@ -25,4 +25,22 @@ public class AuthDto {
         @NotBlank(message = "인증번호는 필수입니다.")
         private String code;
     }
+
+    @Getter
+    @NoArgsConstructor
+    @lombok.AllArgsConstructor
+    @lombok.Builder
+    public static class TokenResponse {
+        private String accessToken;
+        private String refreshToken;
+        private String nickname;
+        private boolean isCoupleConnected;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class SocialLoginRequest {
+        @NotBlank(message = "소셜 토큰은 필수입니다.")
+        private String token;
+    }
 }
