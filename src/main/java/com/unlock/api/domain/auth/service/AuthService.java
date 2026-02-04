@@ -1,7 +1,7 @@
 package com.unlock.api.domain.auth.service;
 
 import com.unlock.api.common.security.jwt.JwtTokenProvider;
-import com.unlock.api.domain.auth.dto.AuthDto;
+import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
 import com.unlock.api.domain.auth.dto.SocialProfile;
 import com.unlock.api.domain.user.entity.AuthProvider;
 import com.unlock.api.domain.user.entity.User;
@@ -21,7 +21,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final List<SocialAuthService> socialAuthServices;
 
-    public AuthDto.TokenResponse socialLogin(AuthProvider provider, String token) {
+    public TokenResponse socialLogin(AuthProvider provider, String token) {
         SocialAuthService socialAuthService = socialAuthServices.stream()
                 .filter(service -> service.getProvider() == provider)
                 .findFirst()
@@ -40,7 +40,7 @@ public class AuthService {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        return AuthDto.TokenResponse.builder()
+        return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .nickname(user.getNickname())

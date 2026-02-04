@@ -2,7 +2,7 @@ package com.unlock.api.domain.couple.service;
 
 import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
-import com.unlock.api.domain.couple.dto.CoupleDto;
+import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.couple.repository.CoupleRepository;
 import com.unlock.api.domain.user.entity.User;
@@ -25,7 +25,7 @@ public class CoupleService {
     /**
      * 내 커플 정보 및 초대 코드 조회
      */
-    public CoupleDto.CoupleResponse getCoupleInfo(Long userId) {
+    public CoupleResponse getCoupleInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -45,7 +45,7 @@ public class CoupleService {
             startDate = couple.getStartDate();
         }
 
-        return CoupleDto.CoupleResponse.builder()
+        return CoupleResponse.builder()
                 .inviteCode(user.getInviteCode())
                 .isConnected(isConnected)
                 .partnerNickname(partnerNickname)
