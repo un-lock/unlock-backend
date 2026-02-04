@@ -1,8 +1,10 @@
 # Build stage
-FROM gradle:8.5-jdk21 AS build
-COPY --chown=gradle:gradle . /home/gradle/src
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /home/gradle/src
-RUN gradle build -x test --no-daemon
+COPY . .
+# 실행 권한 부여 및 윈도우 줄바꿈(CRLF) 문제 해결
+RUN chmod +x gradlew
+RUN ./gradlew build -x test --no-daemon
 
 # Run stage
 FROM eclipse-temurin:21-jre-jammy
