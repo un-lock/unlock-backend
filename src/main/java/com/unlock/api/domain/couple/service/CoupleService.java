@@ -119,12 +119,14 @@ public class CoupleService {
     public void acceptConnection(Long userId) {
         String requesterIdStr = redisService.getCoupleRequest(userId);
         if (requesterIdStr == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE); // 혹은 적절한 에러코드
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
         }
 
         Long requesterId = Long.parseLong(requesterIdStr);
-        User user = userRepository.findById(userId).get();
-        User requester = userRepository.findById(requesterId).get();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // Couple 엔티티 생성 및 실제 연결
         Couple couple = Couple.builder()
@@ -145,6 +147,9 @@ public class CoupleService {
      * 연결 신청 거절
      */
     public void rejectConnection(Long userId) {
+        if (redisService.getCoupleRequest(userId) == null) {
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        }
         redisService.deleteCoupleRequest(userId);
     }
 

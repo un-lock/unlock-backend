@@ -35,12 +35,12 @@ public enum ErrorCode {
     COUPLE_NOT_FOUND(HttpStatus.NOT_FOUND, "CP001", "연결된 커플 정보를 찾을 수 없습니다."),
     INVALID_INVITE_CODE(HttpStatus.BAD_REQUEST, "CP002", "유효하지 않은 초대 코드입니다."),
     ALREADY_CONNECTED(HttpStatus.BAD_REQUEST, "CP003", "귀하는 이미 다른 커플과 연결되어 있습니다."),
-        CANNOT_CONNECT_SELF(HttpStatus.BAD_REQUEST, "CP004", "자기 자신과는 커플을 맺을 수 없습니다."),
-        PARTNER_ALREADY_CONNECTED(HttpStatus.BAD_REQUEST, "CP005", "상대방이 이미 다른 커플과 연결된 상태입니다."),
-        PENDING_REQUEST_EXISTS(HttpStatus.BAD_REQUEST, "CP006", "상대방이 이미 다른 사람으로부터 연결 신청을 받은 상태입니다."),
-        
-        // Question & Answer (Q)
-    : 질문 및 답변 도메인 에러
+    CANNOT_CONNECT_SELF(HttpStatus.BAD_REQUEST, "CP004", "자기 자신과는 커플을 맺을 수 없습니다."),
+    PARTNER_ALREADY_CONNECTED(HttpStatus.BAD_REQUEST, "CP005", "상대방이 이미 다른 커플과 연결된 상태입니다."),
+    PENDING_REQUEST_EXISTS(HttpStatus.BAD_REQUEST, "CP006", "상대방이 이미 다른 사람으로부터 연결 신청을 받은 상태입니다."),
+    REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CP007", "처리할 연결 신청이 존재하지 않습니다."),
+            
+    // Question & Answer (Q): 질문 및 답변 도메인 에러
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Q001", "해당 날짜의 질문을 찾을 수 없습니다."),
     ANSWER_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Q002", "이미 오늘의 답변을 등록하셨습니다."),
     PARTNER_ANSWER_LOCKED(HttpStatus.FORBIDDEN, "Q003", "본인의 답변을 먼저 등록해야 파트너의 답변을 볼 수 있습니다.");
