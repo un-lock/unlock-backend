@@ -3,6 +3,7 @@ package com.unlock.api.common.exception;
 import com.unlock.api.common.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -29,13 +30,18 @@ public class GlobalExceptionHandler {
 
     /**
      * @Valid 또는 @Validated 바인딩 에러 처리 (입력값 검증 실패)
+     * DTO에 정의된 에러 메시지를 추출하여 사용자에게 구체적으로 안내합니다.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        log.error("MethodArgumentNotValidException: {}", e.getMessage());
+        BindingResult bindingResult = e.getBindingResult();
+        String errorMessage = bindingResult.getFieldErrors().get(0).getDefaultMessage();
+        
+        log.error("Validation Error: {}", errorMessage);
+        
         return ResponseEntity
                 .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
-                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), ErrorCode.INVALID_INPUT_VALUE.getMessage()));
+                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), errorMessage));
     }
 
     /**
@@ -43,7 +49,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
-        log.error("Exception: ", e);
+        log.error("Unexpected Exception: ", e);
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
