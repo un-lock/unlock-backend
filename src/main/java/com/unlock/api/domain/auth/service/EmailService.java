@@ -28,6 +28,11 @@ public class EmailService {
         String verificationCode = generateCode();
         
         try {
+            // 1. Redis에 먼저 저장 (저장 실패 시 메일 안 보냄)
+            redisService.saveVerificationCode(email, verificationCode);
+            log.info("Redis 인증번호 저장 성공: {} - code: {}", email, verificationCode);
+
+            // 2. 메일 발송
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
             message.setSubject("[un:lock] 인증번호 안내");
@@ -40,14 +45,13 @@ public class EmailService {
                     """.formatted(verificationCode);
             
             message.setText(content);
-            
             mailSender.send(message);
             
-            // Redis에 저장
-            redisService.saveVerificationCode(email, verificationCode);
-            log.info("이메일 발송 성공: {} - code: {}", email, verificationCode);
+            log.info("이메일 발송 성공: {}", email);
         } catch (Exception e) {
-            log.error("이메일 발송 실패: {}", e.getMessage());
+            log.error("인증 프로세스 실패 (Redis 저장 또는 메일 발송 오류): ", e);
+            // 메일 발송 실패 시 Redis 데이터 삭제 (선택 사항)
+            redisService.deleteVerificationCode(email);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
