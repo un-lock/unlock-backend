@@ -62,4 +62,30 @@ public class RedisService {
     public void deleteRefreshToken(Long userId) {
         redisTemplate.delete("RT:" + userId);
     }
+
+    /**
+     * 커플 연결 신청 저장 (24시간 유효)
+     */
+    public void saveCoupleRequest(Long targetUserId, Long requesterId) {
+        redisTemplate.opsForValue().set(
+                "CP_REQ:" + targetUserId,
+                requesterId.toString(),
+                24,
+                TimeUnit.HOURS
+        );
+    }
+
+    /**
+     * 커플 연결 신청 조회
+     */
+    public String getCoupleRequest(Long targetUserId) {
+        return redisTemplate.opsForValue().get("CP_REQ:" + targetUserId);
+    }
+
+    /**
+     * 커플 연결 신청 삭제 (수락/거절 시)
+     */
+    public void deleteCoupleRequest(Long targetUserId) {
+        redisTemplate.delete("CP_REQ:" + targetUserId);
+    }
 }
