@@ -1,6 +1,7 @@
 package com.unlock.api.domain.auth.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Redis를 활용한 데이터 관리 서비스 (주로 이메일 인증번호 저장 용도)
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RedisService {
@@ -19,12 +21,9 @@ public class RedisService {
      * 인증번호 저장 (3분간 유효)
      */
     public void saveVerificationCode(String email, String code) {
-        redisTemplate.opsForValue().set(
-                "AUTH:" + email,
-                code,
-                3,
-                TimeUnit.MINUTES
-        );
+        String key = "AUTH:" + email;
+        redisTemplate.opsForValue().set(key, code, 3, TimeUnit.MINUTES);
+        log.info("Redis 저장 완료 - Key: {}, Value: {}", key, code);
     }
 
     /**
@@ -45,12 +44,9 @@ public class RedisService {
      * Refresh Token 저장
      */
     public void saveRefreshToken(Long userId, String refreshToken, long expirationTime) {
-        redisTemplate.opsForValue().set(
-                "RT:" + userId,
-                refreshToken,
-                expirationTime,
-                TimeUnit.MILLISECONDS
-        );
+        String key = "RT:" + userId;
+        redisTemplate.opsForValue().set(key, refreshToken, expirationTime, TimeUnit.MILLISECONDS);
+        log.info("Redis RefreshToken 저장 완료 - Key: {}", key);
     }
 
     /**
