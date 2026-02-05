@@ -20,11 +20,17 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final RedisService redisService;
+    private final UserRepository userRepository;
 
     /**
      * 인증 이메일 발송
      */
     public void sendVerificationEmail(String email) {
+        // 0. 이메일 중복 확인 (인증번호 보내기 전 사전 차단)
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException("이미 가입된 이메일입니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+
         String verificationCode = generateCode();
         
         try {
