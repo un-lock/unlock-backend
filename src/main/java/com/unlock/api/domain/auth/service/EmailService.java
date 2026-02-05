@@ -2,6 +2,7 @@ package com.unlock.api.domain.auth.service;
 
 import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
+import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
@@ -26,19 +27,16 @@ public class EmailService {
      * 인증 이메일 발송
      */
     public void sendVerificationEmail(String email) {
-        // 0. 이메일 중복 확인 (인증번호 보내기 전 사전 차단)
         if (userRepository.existsByEmail(email)) {
-            throw new BusinessException("이미 가입된 이메일입니다.", ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         String verificationCode = generateCode();
         
         try {
-            // 1. Redis에 먼저 저장 (저장 실패 시 메일 안 보냄)
             redisService.saveVerificationCode(email, verificationCode);
             log.info("Redis 인증번호 저장 성공: {} - code: {}", email, verificationCode);
 
-            // 2. 메일 발송
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
             message.setSubject("[un:lock] 인증번호 안내");
@@ -55,8 +53,7 @@ public class EmailService {
             
             log.info("이메일 발송 성공: {}", email);
         } catch (Exception e) {
-            log.error("인증 프로세스 실패 (Redis 저장 또는 메일 발송 오류): ", e);
-            // 메일 발송 실패 시 Redis 데이터 삭제 (선택 사항)
+            log.error("인증 프로세스 실패: ", e);
             redisService.deleteVerificationCode(email);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -68,17 +65,17 @@ public class EmailService {
     public void verifyCode(String email, String code) {
         String savedCode = redisService.getVerificationCode(email);
         
-        if (savedCode == null || !savedCode.equals(code)) {
-            throw new BusinessException("인증번호가 일치하지 않거나 만료되었습니다.", ErrorCode.INVALID_INPUT_VALUE);
+        if (savedCode == null) {
+            throw new BusinessException(ErrorCode.AUTH_CODE_NOT_FOUND);
         }
         
-        // 확인 성공 시 삭제
+        if (!savedCode.equals(code)) {
+            throw new BusinessException(ErrorCode.AUTH_CODE_MISMATCH);
+        }
+        
         redisService.deleteVerificationCode(email);
     }
 
-    /**
-     * 6자리 난수 생성
-     */
     private String generateCode() {
         Random random = new Random();
         return String.format("%06d", random.nextInt(1000000));
