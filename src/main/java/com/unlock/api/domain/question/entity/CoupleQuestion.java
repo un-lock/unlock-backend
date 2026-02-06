@@ -45,4 +45,11 @@ public class CoupleQuestion extends BaseTimeEntity {
 
     @Column(nullable = false)
     private LocalDate assignedDate; // 질문이 배정된 날짜
+
+    /**
+     * 배정 날짜 업데이트 (미완료 질문을 오늘 날짜로 이동시킬 때 사용)
+     */
+    public void updateAssignedDate(LocalDate newDate) {
+        this.assignedDate = newDate;
+    }
 }
