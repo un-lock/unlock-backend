@@ -43,9 +43,7 @@ public class QuestionService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 현재 배정된 질문 조회 및 날짜 보정 로직 실행
         Question question = assignQuestionToCouple(couple);
-
         boolean isAnswered = answerRepository.existsByUserAndQuestion(user, question);
 
         return convertToResponse(question, isAnswered);
@@ -53,19 +51,17 @@ public class QuestionService {
 
     /**
      * 커플에게 질문 배정 (스케줄러 및 API 공용)
-     * - [핵심 정책] 이전 질문 미완료 시 오늘 날짜로 이동
-     * - 모두 완료 시에만 새로운 질문 배정
      */
     public Question assignQuestionToCouple(Couple couple) {
         LocalDate today = LocalDate.now();
 
-        // 1. 이미 오늘 날짜로 배정된 질문이 있다면 그대로 반환
+        // 1. 이미 오늘 배정 완료된 경우
         Optional<CoupleQuestion> todayRecord = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, today);
         if (todayRecord.isPresent()) {
             return todayRecord.get().getQuestion();
         }
 
-        // 2. 가장 최근에 배정된 질문 조회
+        // 2. 미완료 질문이 있는지 확인 후 이동(Migration) 처리
         Optional<CoupleQuestion> lastRecord = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple);
         
         if (lastRecord.isPresent()) {
@@ -73,15 +69,14 @@ public class QuestionService {
             boolean user1Finished = answerRepository.existsByUserAndQuestion(couple.getUser1(), last.getQuestion());
             boolean user2Finished = answerRepository.existsByUserAndQuestion(couple.getUser2(), last.getQuestion());
 
-            // 한 명이라도 답변을 안 했다면? -> 해당 질문을 오늘 날짜로 '이사' 시킴
             if (!(user1Finished && user2Finished)) {
-                log.info("커플(ID:{}) 미완료 질문 발견. 날짜를 {}에서 {}로 이동합니다.", couple.getId(), last.getAssignedDate(), today);
+                log.info("[MOVE] 커플(ID:{}) 미완료 질문 발견 -> 날짜를 {}로 이동", couple.getId(), today);
                 last.updateAssignedDate(today);
                 return last.getQuestion();
             }
         }
 
-        // 3. 이전 질문이 없거나 모두 완료했다면 새로운 랜덤 질문 배정
+        // 3. 완전히 새로운 질문 랜덤 배정
         Question randomQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
@@ -92,7 +87,7 @@ public class QuestionService {
                 .build();
         
         coupleQuestionRepository.save(newAssignment);
-        log.info("커플(ID:{})에게 새로운 질문 배정 완료: {}", couple.getId(), randomQuestion.getContent());
+        log.info("[NEW] 커플(ID:{}) 새로운 질문 배정 완료: ID={}", couple.getId(), randomQuestion.getId());
         return randomQuestion;
     }
 
