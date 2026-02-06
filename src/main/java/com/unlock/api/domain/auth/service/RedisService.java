@@ -64,6 +64,17 @@ public class RedisService {
     }
 
     /**
+     * 특정 시간에 대한 작업 락 획득 (중복 실행 방지)
+     * @return 락 획득 성공 시 true, 이미 있으면 false
+     */
+    public boolean lockSchedule(String timeKey) {
+        String key = "LOCK:" + timeKey;
+        // setIfAbsent는 값이 없을 때만 저장함 (Atomic)
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED", 59, TimeUnit.SECONDS);
+        return success != null && success;
+    }
+
+    /**
      * 커플 연결 신청 저장 (24시간 유효)
      */
     public void saveCoupleRequest(Long targetUserId, Long requesterId) {
