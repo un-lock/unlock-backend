@@ -44,11 +44,9 @@ public class AnswerService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 오늘 우리 커플에게 배정된 질문 조회
         CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 이미 답변했는지 확인
         if (answerRepository.existsByUserAndQuestion(user, coupleQuestion.getQuestion())) {
             throw new BusinessException(ErrorCode.ANSWER_ALREADY_EXISTS);
         }
@@ -76,7 +74,7 @@ public class AnswerService {
         CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 1. 내 답변 조회
+        // 1. 내 답변 조회 (내가 안 썼으면 파트너 답변은 아예 차단)
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, coupleQuestion.getQuestion())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PARTNER_ANSWER_LOCKED));
 
@@ -100,15 +98,34 @@ public class AnswerService {
      * 파트너 답변 잠금 해제 (광고 시청 완료 시 호출)
      */
     public void revealPartnerAnswer(Long userId, Long answerId) {
-        User user = userRepository.findById(userId).get();
-        Answer partnerAnswer = answerRepository.findById(answerId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 이미 열려있는지 확인 후 저장
-        if (!answerRevealRepository.existsByUserAndAnswer(user, partnerAnswer)) {
+        // 1. 대상 답변 존재 확인 (에러 코드 Q002 - ANSWER_NOT_FOUND 사용)
+        Answer targetAnswer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
+
+        // 2. 본인 답변 여부 체크
+        if (targetAnswer.getUser().getId().equals(userId)) {
+            throw new BusinessException("자신의 답변은 해제할 필요가 없습니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 3. 파트너 관계 체크
+        Couple couple = user.getCouple();
+        if (couple == null || !targetAnswer.getUser().getCouple().getId().equals(couple.getId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        // 4. 상대방이 답변을 썼는지 확인 (이미 1번에서 존재 여부 확인되지만 의미론적 보완)
+        if (targetAnswer.getContent() == null || targetAnswer.getContent().isBlank()) {
+            throw new BusinessException(ErrorCode.PARTNER_NOT_ANSWERED);
+        }
+
+        // 5. 이미 해제되어 있는지 확인 후 저장
+        if (!answerRevealRepository.existsByUserAndAnswer(user, targetAnswer)) {
             answerRevealRepository.save(AnswerReveal.builder()
                     .user(user)
-                    .answer(partnerAnswer)
+                    .answer(targetAnswer)
                     .build());
         }
     }
