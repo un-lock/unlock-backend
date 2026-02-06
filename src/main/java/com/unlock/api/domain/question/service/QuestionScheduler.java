@@ -27,8 +27,8 @@ public class QuestionScheduler {
      */
     @Scheduled(cron = "0 * * * * *")
     public void scheduleDailyQuestions() {
-        // 초를 제외한 시:분 정보 가져오기
-        LocalTime now = LocalTime.now().withSecond(0).withNano(0);
+        // 시스템 시계 오차(밀리초 단위) 보정을 위해 30초를 더한 후 분 단위 추출
+        LocalTime now = LocalTime.now().plusSeconds(30).withSecond(0).withNano(0);
         log.info("자동 질문 배정 스케줄러 작동 중... 기준 시간: {}", now);
 
         // 해당 시간이 알림 시간인 커플 조회
