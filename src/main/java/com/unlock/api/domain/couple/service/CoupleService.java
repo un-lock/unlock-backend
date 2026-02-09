@@ -21,7 +21,13 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * 커플 매칭 및 관리 비즈니스 로직 서비스
+ * 커플 매칭 및 관계 관리 비즈니스 로직 서비스
+ * 
+ * 주요 기능:
+ * - 초대 코드 생성 및 조회
+ * - 커플 연결 신청 (Redis 기반 대기열)
+ * - 신청 수락/거절 및 커플 생성
+ * - 커플 해제 및 관련 데이터 전수 파기 (Privacy First)
  */
 @Slf4j
 @Service
@@ -38,12 +44,17 @@ public class CoupleService {
 
     /**
      * 내 커플 정보 및 초대 코드 조회
+     * 유저에게 초대 코드가 없는 경우 최초 1회 생성하여 저장합니다.
+     * 
+     * @param userId 현재 로그인한 유저 ID
+     * @return 초대 코드, 연결 여부, 파트너 닉네임 등을 포함한 응답 객체
      */
     @Transactional(readOnly = true)
     public CoupleResponse getCoupleInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 초대 코드가 없는 신규 유저에게 코드 부여
         if (user.getInviteCode() == null) {
             user.setInviteCode(generateInviteCode());
         }
@@ -54,6 +65,7 @@ public class CoupleService {
 
         if (isConnected) {
             Couple couple = user.getCouple();
+            // 두 유저 중 내가 아닌 다른 한 명(파트너)을 식별
             User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
             partnerNickname = partner.getNickname();
             startDate = couple.getStartDate();
@@ -69,34 +81,60 @@ public class CoupleService {
 
     /**
      * 커플 연결 신청
+     * 초대 코드를 통해 상대방에게 연결을 요청하며, 정보는 Redis에 24시간 동안 유지됩니다.
+     * 
+     * @param userId 신청을 보내는 유저 ID
+     * @param inviteCode 상대방의 초대 코드
      */
     public void requestConnection(Long userId, String inviteCode) {
         User requester = userRepository.findById(userId).get();
-        if (requester.getCouple() != null) throw new BusinessException(ErrorCode.ALREADY_CONNECTED);
+        
+        // 1. 본인이 이미 커플인지 확인
+        if (requester.getCouple() != null) {
+            throw new BusinessException(ErrorCode.ALREADY_CONNECTED);
+        }
 
+        // 2. 초대 코드의 유효성 및 대상 유저 존재 확인
         User target = userRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITE_CODE));
 
-        if (target.getId().equals(userId)) throw new BusinessException(ErrorCode.CANNOT_CONNECT_SELF);
-        if (target.getCouple() != null) throw new BusinessException(ErrorCode.PARTNER_ALREADY_CONNECTED);
-        if (redisService.getCoupleRequest(target.getId()) != null) throw new BusinessException(ErrorCode.PENDING_REQUEST_EXISTS);
+        // 3. 자기 자신과의 연결 방지
+        if (target.getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.CANNOT_CONNECT_SELF);
+        }
 
+        // 4. 상대방이 이미 커플인지 확인
+        if (target.getCouple() != null) {
+            throw new BusinessException(ErrorCode.PARTNER_ALREADY_CONNECTED);
+        }
+
+        // 5. 상대방에게 이미 온 신청이 있는지 확인 (선착순 처리)
+        if (redisService.getCoupleRequest(target.getId()) != null) {
+            throw new BusinessException(ErrorCode.PENDING_REQUEST_EXISTS);
+        }
+
+        // Redis에 신청 정보 저장 (키: "CP_REQ:상대ID", 값: "내ID")
         redisService.saveCoupleRequest(target.getId(), userId);
         
         // TODO: [Push Notification] target 유저에게 "A님으로부터 커플 연결 신청이 왔습니다! 💌" 알림 발송
     }
 
     /**
-     * 연결 신청 수락 및 커플 생성
+     * 연결 신청 수락
+     * 신청 기록을 확인하여 실제 Couple 엔티티를 생성하고 관계를 확정합니다.
      */
     public void acceptConnection(Long userId) {
+        // 1. 나에게 온 신청이 있는지 확인
         String requesterIdStr = redisService.getCoupleRequest(userId);
-        if (requesterIdStr == null) throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        if (requesterIdStr == null) {
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        }
 
         Long requesterId = Long.parseLong(requesterIdStr);
         User user = userRepository.findById(userId).get();
         User requester = userRepository.findById(requesterId).get();
 
+        // 2. Couple 엔티티 생성 및 양방향 연관관계 설정
         Couple couple = Couple.builder()
                 .user1(requester)
                 .user2(user)
@@ -107,6 +145,7 @@ public class CoupleService {
         user.setCouple(couple);
         requester.setCouple(couple);
 
+        // 3. 처리 완료된 Redis 신청 정보 삭제
         redisService.deleteCoupleRequest(userId);
 
         // TODO: [Push Notification] requester 유저에게 "신청을 수락하여 커플 연결이 완료되었습니다! 💕" 알림 발송
@@ -114,34 +153,47 @@ public class CoupleService {
 
     /**
      * 커플 연결 해제 (Breakup)
+     * 은밀한 대화 서비스의 특성상, 해제 시 모든 관련 데이터를 즉시 영구 파기(Hard Delete) 합니다.
+     * 파기 대상: 모든 답변, 열람 기록, 질문 배정 기록
      */
     public void breakup(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Couple couple = user.getCouple();
-        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
 
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
+        log.info("[BREAKUP] 커플(ID:{}) 데이터 영구 파기 시작 (요청자: {})", couple.getId(), user.getNickname());
+
+        // 1. 연관 데이터 삭제 (순서 준수)
         answerRevealRepository.deleteAllByUser(user);
         answerRevealRepository.deleteAllByUser(partner);
         answerRepository.deleteAllByUser(user);
         answerRepository.deleteAllByUser(partner);
         coupleQuestionRepository.deleteAllByCouple(couple);
 
+        // 2. 유저 관계 초기화 및 신규 초대 코드 부여 (새 인연을 위해)
         user.setCouple(null);
         user.setInviteCode(generateInviteCode());
+        
         partner.setCouple(null);
         partner.setInviteCode(generateInviteCode());
 
+        // 3. 커플 엔티티 삭제
         coupleRepository.delete(couple);
 
+        log.info("[BREAKUP] 커플(ID:{})의 모든 기록이 성공적으로 삭제되었습니다.", couple.getId());
+        
         // TODO: [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
     }
 
     /**
-     * 나에게 온 연결 신청 확인
+     * 나에게 온 연결 신청 정보 확인
+     * @return 신청자 ID와 닉네임 정보를 담은 DTO
      */
     @Transactional(readOnly = true)
     public CoupleRequestResponse getReceivedRequest(Long userId) {
@@ -155,17 +207,24 @@ public class CoupleService {
                 .build();
     }
 
+    /**
+     * 연결 신청 거절
+     */
     public void rejectConnection(Long userId) {
         String requesterIdStr = redisService.getCoupleRequest(userId);
-        if (requesterIdStr == null) throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        if (requesterIdStr == null) {
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        }
         
-        Long requesterId = Long.parseLong(requesterIdStr);
-        
+        // 신청 정보만 삭제
         redisService.deleteCoupleRequest(userId);
 
         // TODO: [Push Notification] requester 유저에게 "커플 연결 신청이 거절되었습니다. 😢" 알림 발송
     }
 
+    /**
+     * 8자리 대문자 초대 코드 생성
+     */
     private String generateInviteCode() {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
