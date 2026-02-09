@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -72,21 +71,20 @@ public class ArchiveService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 해당 커플에게 배정된 질문인지 검증하며 조회
-        List<CoupleQuestion> history = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple);
-        CoupleQuestion targetCq = history.stream()
+        // 1. 해당 질문이 이 커플에게 배정된 적이 있는지 확인
+        CoupleQuestion targetCq = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple).stream()
                 .filter(cq -> cq.getQuestion().getId().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 1. 내 답변 조회
+        // 2. 내 답변 조회
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, targetCq.getQuestion()).orElse(null);
         
-        // 2. 파트너 정보 및 답변 조회
+        // 3. 파트너 답변 조회
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         Answer partnerAnswer = answerRepository.findByUserAndQuestion(partner, targetCq.getQuestion()).orElse(null);
 
-        // 3. 열람 권한 체크
+        // 4. 열람 권한 체크 (내가 썼고 + (구독 중이거나 광고를 봤거나))
         boolean isRevealed = false;
         if (myAnswer != null && partnerAnswer != null) {
             isRevealed = couple.isSubscribed() || answerRevealRepository.existsByUserAndAnswer(user, partnerAnswer);
