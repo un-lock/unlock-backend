@@ -8,6 +8,7 @@ import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
 import com.unlock.api.domain.couple.service.CoupleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,12 +61,36 @@ public class CoupleController {
         return ApiResponse.success("커플 연결이 완료되었습니다.", null);
     }
 
-    /**
-     * 연결 신청 거절
-     */
-    @PostMapping("/reject")
-    public ApiResponse<Void> rejectConnection(@CurrentUser Long userId) {
-        coupleService.rejectConnection(userId);
-        return ApiResponse.success("연결 신청을 거절했습니다.", null);
+        /**
+
+         * 연결 신청 거절
+
+         */
+
+        @PostMapping("/reject")
+
+        public ApiResponse<Void> rejectConnection(@CurrentUser Long userId) {
+
+            coupleService.rejectConnection(userId);
+
+            return ApiResponse.success("연결 신청을 거절했습니다.", null);
+
+        }
+
+    
+
+        /**
+
+         * 커플 연결 해제 (데이터 즉시 파기)
+
+         */
+
+        @DeleteMapping
+        public ApiResponse<Void> breakup(@CurrentUser Long userId) {
+            coupleService.breakup(userId);
+            return ApiResponse.success("커플 연결이 해제되었으며 모든 데이터가 파기되었습니다.", null);
+        }
+
     }
-}
+
+    
