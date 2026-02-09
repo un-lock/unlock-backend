@@ -32,8 +32,6 @@ public class CoupleService {
     private final CoupleRepository coupleRepository;
     private final UserRepository userRepository;
     private final RedisService redisService;
-    
-    // 연쇄 삭제를 위한 레포지토리들 주입
     private final AnswerRepository answerRepository;
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
@@ -84,6 +82,8 @@ public class CoupleService {
         if (redisService.getCoupleRequest(target.getId()) != null) throw new BusinessException(ErrorCode.PENDING_REQUEST_EXISTS);
 
         redisService.saveCoupleRequest(target.getId(), userId);
+        
+        // TODO: [Push Notification] target 유저에게 "A님으로부터 커플 연결 신청이 왔습니다! 💌" 알림 발송
     }
 
     /**
@@ -108,49 +108,36 @@ public class CoupleService {
         requester.setCouple(couple);
 
         redisService.deleteCoupleRequest(userId);
+
+        // TODO: [Push Notification] requester 유저에게 "신청을 수락하여 커플 연결이 완료되었습니다! 💕" 알림 발송
     }
 
     /**
      * 커플 연결 해제 (Breakup)
-     * - [철저한 파기 정책] 모든 답변, 열람 기록, 배정 기록을 즉시 영구 삭제합니다.
      */
     public void breakup(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Couple couple = user.getCouple();
-        if (couple == null) {
-            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
-        }
+        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
-        log.info("[BREAKUP] 커플(ID:{}) 해제 및 데이터 파기를 시작합니다. 요청자: {}", couple.getId(), user.getNickname());
-
-        // 1. 답변 열람 기록 삭제 (AnswerReveal)
         answerRevealRepository.deleteAllByUser(user);
         answerRevealRepository.deleteAllByUser(partner);
-
-        // 2. 두 유저의 모든 답변 삭제 (Answer)
         answerRepository.deleteAllByUser(user);
         answerRepository.deleteAllByUser(partner);
-
-        // 3. 커플 질문 배정 이력 삭제 (CoupleQuestion)
         coupleQuestionRepository.deleteAllByCouple(couple);
 
-        // 4. 유저 상태 초기화 및 초대 코드 재생성
         user.setCouple(null);
-        user.setInviteCode(generateInviteCode()); // 새 코드 부여
-        
+        user.setInviteCode(generateInviteCode());
         partner.setCouple(null);
-        partner.setInviteCode(generateInviteCode()); // 새 코드 부여
+        partner.setInviteCode(generateInviteCode());
 
-        // 5. 커플 엔티티 삭제
         coupleRepository.delete(couple);
 
-        log.info("[BREAKUP] 커플(ID:{})의 모든 데이터가 성공적으로 파기되었습니다.", couple.getId());
-        
-        // TODO: 파트너에게 해제 알림 발송 (FCM)
+        // TODO: [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
     }
 
     /**
@@ -169,8 +156,14 @@ public class CoupleService {
     }
 
     public void rejectConnection(Long userId) {
-        if (redisService.getCoupleRequest(userId) == null) throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        String requesterIdStr = redisService.getCoupleRequest(userId);
+        if (requesterIdStr == null) throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        
+        Long requesterId = Long.parseLong(requesterIdStr);
+        
         redisService.deleteCoupleRequest(userId);
+
+        // TODO: [Push Notification] requester 유저에게 "커플 연결 신청이 거절되었습니다. 😢" 알림 발송
     }
 
     private String generateInviteCode() {

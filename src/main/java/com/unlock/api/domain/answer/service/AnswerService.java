@@ -58,6 +58,9 @@ public class AnswerService {
                 .build();
 
         answerRepository.save(answer);
+
+        // TODO: [Push Notification] 파트너를 찾아서 "상대방이 답변을 완료했습니다! 확인하러 가볼까요? 🔓" 알림 발송
+        // (만약 파트너도 이미 답변을 쓴 상태라면 더 강력하게 유도 가능)
     }
 
     /**
@@ -74,15 +77,12 @@ public class AnswerService {
         CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 1. 내 답변 조회 (내가 안 썼으면 파트너 답변은 아예 차단)
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, coupleQuestion.getQuestion())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PARTNER_ANSWER_LOCKED));
 
-        // 2. 파트너 답변 조회
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         Answer partnerAnswer = answerRepository.findByUserAndQuestion(partner, coupleQuestion.getQuestion()).orElse(null);
 
-        // 3. 열람 권한 체크 (구독 중이거나, 광고를 봤거나)
         boolean isRevealed = false;
         if (partnerAnswer != null) {
             isRevealed = couple.isSubscribed() || answerRevealRepository.existsByUserAndAnswer(user, partnerAnswer);
@@ -101,27 +101,22 @@ public class AnswerService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. 대상 답변 존재 확인 (에러 코드 Q002 - ANSWER_NOT_FOUND 사용)
         Answer targetAnswer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
 
-        // 2. 본인 답변 여부 체크
         if (targetAnswer.getUser().getId().equals(userId)) {
             throw new BusinessException("자신의 답변은 해제할 필요가 없습니다.", ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 3. 파트너 관계 체크
         Couple couple = user.getCouple();
         if (couple == null || !targetAnswer.getUser().getCouple().getId().equals(couple.getId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
-        // 4. 상대방이 답변을 썼는지 확인 (이미 1번에서 존재 여부 확인되지만 의미론적 보완)
         if (targetAnswer.getContent() == null || targetAnswer.getContent().isBlank()) {
             throw new BusinessException(ErrorCode.PARTNER_NOT_ANSWERED);
         }
 
-        // 5. 이미 해제되어 있는지 확인 후 저장
         if (!answerRevealRepository.existsByUserAndAnswer(user, targetAnswer)) {
             answerRevealRepository.save(AnswerReveal.builder()
                     .user(user)
