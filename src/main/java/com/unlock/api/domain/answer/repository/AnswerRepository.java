@@ -18,4 +18,9 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
      * 특정 유저가 특정 질문에 답변을 남겼는지 확인
      */
     boolean existsByUserAndQuestion(User user, Question question);
+
+    /**
+     * 특정 유저의 모든 답변 삭제 (커플 해제 시 사용)
+     */
+    void deleteAllByUser(User user);
 }

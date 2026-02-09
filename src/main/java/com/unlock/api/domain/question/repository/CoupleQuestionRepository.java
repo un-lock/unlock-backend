@@ -2,11 +2,13 @@ package com.unlock.api.domain.question.repository;
 
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.question.entity.CoupleQuestion;
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
 
 public interface CoupleQuestionRepository extends JpaRepository<CoupleQuestion, Long> {
     
@@ -26,7 +28,7 @@ public interface CoupleQuestionRepository extends JpaRepository<CoupleQuestion, 
     @Query("SELECT cq FROM CoupleQuestion cq WHERE cq.couple = :couple " +
            "AND YEAR(cq.assignedDate) = :year AND MONTH(cq.assignedDate) = :month " +
            "ORDER BY cq.assignedDate ASC")
-    List<CoupleQuestion> findAllByCoupleAndYearAndMonth(@Param("couple") Couple couple, 
+    List<CoupleQuestion> findAllByCoupleAndYearAndMonth(@Param("couple") Couple couple,
                                                         @Param("year") int year, 
                                                         @Param("month") int month);
 
@@ -34,4 +36,9 @@ public interface CoupleQuestionRepository extends JpaRepository<CoupleQuestion, 
      * 특정 커플에게 가장 최근에 배정된 질문 하나 조회
      */
     Optional<CoupleQuestion> findTopByCoupleOrderByAssignedDateDesc(Couple couple);
+
+    /**
+     * 특정 커플의 모든 배정 이력 삭제 (커플 해제 시 사용)
+     */
+    void deleteAllByCouple(Couple couple);
 }
