@@ -21,6 +21,16 @@ public interface CoupleQuestionRepository extends JpaRepository<CoupleQuestion, 
     List<CoupleQuestion> findAllByCoupleOrderByAssignedDateDesc(Couple couple);
 
     /**
+     * 특정 커플의 특정 기간(년/월) 질문 배정 기록 조회
+     */
+    @Query("SELECT cq FROM CoupleQuestion cq WHERE cq.couple = :couple " +
+           "AND YEAR(cq.assignedDate) = :year AND MONTH(cq.assignedDate) = :month " +
+           "ORDER BY cq.assignedDate ASC")
+    List<CoupleQuestion> findAllByCoupleAndYearAndMonth(@Param("couple") Couple couple, 
+                                                        @Param("year") int year, 
+                                                        @Param("month") int month);
+
+    /**
      * 특정 커플에게 가장 최근에 배정된 질문 하나 조회
      */
     Optional<CoupleQuestion> findTopByCoupleOrderByAssignedDateDesc(Couple couple);
