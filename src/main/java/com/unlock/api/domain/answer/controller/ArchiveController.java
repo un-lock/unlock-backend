@@ -6,10 +6,7 @@ import com.unlock.api.domain.answer.dto.ArchiveDto.ArchiveDetailResponse;
 import com.unlock.api.domain.answer.dto.ArchiveDto.ArchiveSummaryResponse;
 import com.unlock.api.domain.answer.service.ArchiveService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -24,15 +21,20 @@ public class ArchiveController {
     private final ArchiveService archiveService;
 
     /**
-     * 아카이브 목록 조회 (캘린더용)
+     * 월별 아카이브 요약 조회 (캘린더 점 찍기용)
+     * @param year 년도 (ex: 2026)
+     * @param month 월 (ex: 2)
      */
     @GetMapping
-    public ApiResponse<List<ArchiveSummaryResponse>> getArchiveList(@CurrentUser Long userId) {
-        return ApiResponse.success("아카이브 목록 조회 성공", archiveService.getArchiveList(userId));
+    public ApiResponse<List<ArchiveSummaryResponse>> getMonthlyArchive(
+            @CurrentUser Long userId,
+            @RequestParam int year,
+            @RequestParam int month) {
+        return ApiResponse.success("월별 아카이브 조회 성공", archiveService.getMonthlyArchive(userId, year, month));
     }
 
     /**
-     * 아카이브 상세 조회
+     * 아카이브 상세 조회 (특정 질문 클릭 시)
      */
     @GetMapping("/{questionId}")
     public ApiResponse<ArchiveDetailResponse> getArchiveDetail(

@@ -35,10 +35,10 @@ public class ArchiveService {
     private final UserRepository userRepository;
 
     /**
-     * 전체 아카이브 목록 조회 (최신순)
-     * - 캘린더 구성을 위해 날짜, 질문ID, 두 사람의 답변 여부 반환
+     * 월별 아카이브 요약 목록 조회 (캘린더용)
+     * - 특정 년/월의 질문 ID와 두 사람의 답변 완료 여부만 반환
      */
-    public List<ArchiveSummaryResponse> getArchiveList(Long userId) {
+    public List<ArchiveSummaryResponse> getMonthlyArchive(Long userId, int year, int month) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -47,22 +47,26 @@ public class ArchiveService {
 
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
-        return coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple)
+        // 특정 년/월의 데이터만 조회
+        return coupleQuestionRepository.findAllByCoupleAndYearAndMonth(couple, year, month)
                 .stream()
-                .map(cq -> ArchiveSummaryResponse.builder()
-                        .questionId(cq.getQuestion().getId())
-                        .questionContent(cq.getQuestion().getContent())
-                        .date(cq.getAssignedDate())
-                        .myAnswered(answerRepository.existsByUserAndQuestion(user, cq.getQuestion()))
-                        .partnerAnswered(answerRepository.existsByUserAndQuestion(partner, cq.getQuestion()))
-                        .build())
+                .map(cq -> {
+                    boolean myAnswered = answerRepository.existsByUserAndQuestion(user, cq.getQuestion());
+                    boolean partnerAnswered = answerRepository.existsByUserAndQuestion(partner, cq.getQuestion());
+                    
+                    return ArchiveSummaryResponse.builder()
+                            .questionId(cq.getQuestion().getId())
+                            .questionContent(cq.getQuestion().getContent()) // 요약 목록에서도 질문 제목은 필요할 수 있음
+                            .date(cq.getAssignedDate())
+                            .myAnswered(myAnswered)
+                            .partnerAnswered(partnerAnswered)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
     /**
      * 아카이브 상세 조회
-     * - 특정 질문에 대한 두 사람의 답변 상세 내용 반환
-     * - 잠금 로직(본인 미등록 시 차단, 광고/구독 체크) 동일 적용
      */
     public ArchiveDetailResponse getArchiveDetail(Long userId, Long questionId) {
         User user = userRepository.findById(userId)
@@ -71,20 +75,21 @@ public class ArchiveService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 1. 해당 질문이 이 커플에게 배정된 적이 있는지 확인
-        CoupleQuestion targetCq = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple).stream()
+        // 해당 커플에게 배정된 질문인지 검증하며 조회
+        List<CoupleQuestion> history = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple);
+        CoupleQuestion targetCq = history.stream()
                 .filter(cq -> cq.getQuestion().getId().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 2. 내 답변 조회
+        // 1. 내 답변 조회
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, targetCq.getQuestion()).orElse(null);
         
-        // 3. 파트너 답변 조회
+        // 2. 파트너 정보 및 답변 조회
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         Answer partnerAnswer = answerRepository.findByUserAndQuestion(partner, targetCq.getQuestion()).orElse(null);
 
-        // 4. 열람 권한 체크 (내가 썼고 + (구독 중이거나 광고를 봤거나))
+        // 3. 열람 권한 체크
         boolean isRevealed = false;
         if (myAnswer != null && partnerAnswer != null) {
             isRevealed = couple.isSubscribed() || answerRevealRepository.existsByUserAndAnswer(user, partnerAnswer);
