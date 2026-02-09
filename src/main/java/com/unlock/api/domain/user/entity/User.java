@@ -69,4 +69,14 @@ public class User extends BaseTimeEntity {
     public void setCouple(Couple couple) {
         this.couple = couple;
     }
+
+    /**
+     * 닉네임 변경
+     */
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
 }
+
+    
