@@ -2,8 +2,22 @@ package com.unlock.api.domain.user.entity;
 
 import com.unlock.api.domain.common.BaseTimeEntity;
 import com.unlock.api.domain.couple.entity.Couple;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * 사용자 정보를 담는 엔티티
@@ -35,9 +49,19 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private AuthProvider provider; // 인증 제공자 (KAKAO, GOOGLE, APPLE, EMAIL)
 
+    @Column(unique = true)
+    private String inviteCode; // 커플 연결을 위한 초대 코드
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "couple_id")
     private Couple couple; // 소속된 커플 정보
+
+    /**
+     * 초대 코드 설정
+     */
+    public void setInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
+    }
 
     /**
      * 커플 연결 설정

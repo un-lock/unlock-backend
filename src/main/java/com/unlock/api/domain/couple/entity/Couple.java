@@ -2,8 +2,20 @@ package com.unlock.api.domain.couple.entity;
 
 import com.unlock.api.domain.common.BaseTimeEntity;
 import com.unlock.api.domain.user.entity.User;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -37,4 +49,8 @@ public class Couple extends BaseTimeEntity {
     @Builder.Default
     @Column(nullable = false)
     private LocalTime notificationTime = LocalTime.of(22, 0); // 질문 알림 시간 (기본값 오후 10시)
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isSubscribed = false; // 프리미엄 구독 여부 (true인 경우 광고 없이 답변 열람 가능)
 }
