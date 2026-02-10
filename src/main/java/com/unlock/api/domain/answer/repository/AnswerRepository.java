@@ -3,14 +3,18 @@ package com.unlock.api.domain.answer.repository;
 import com.unlock.api.domain.answer.entity.Answer;
 import com.unlock.api.domain.question.entity.Question;
 import com.unlock.api.domain.user.entity.User;
-import io.lettuce.core.dynamic.annotation.Param;
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface AnswerRepository extends JpaRepository<Answer, Long> {
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * 답변 관련 메인 레포지토리
+ * 기본 CRUD는 JpaRepository를, 복잡한 조회는 AnswerRepositoryCustom(Querydsl)을 사용합니다.
+ */
+public interface AnswerRepository extends JpaRepository<Answer, Long>, AnswerRepositoryCustom {
     
     /**
      * 특정 유저가 특정 질문에 대해 작성한 답변 조회

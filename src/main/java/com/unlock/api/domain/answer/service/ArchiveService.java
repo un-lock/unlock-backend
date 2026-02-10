@@ -19,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 아카이브(기록장) 조회 비즈니스 로직 서비스
@@ -37,6 +35,7 @@ public class ArchiveService {
 
     /**
      * 월별 아카이브 요약 목록 조회 (캘린더용)
+     * [최고 성능 최적화]: Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
      */
     public List<ArchiveSummaryResponse> getMonthlyArchive(Long userId, int year, int month) {
         User user = userRepository.findById(userId)
@@ -47,31 +46,8 @@ public class ArchiveService {
 
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
-        List<CoupleQuestion> questions = coupleQuestionRepository.findAllByCoupleAndYearAndMonth(couple, year, month);
-        
-        List<Long> questionIds = questions.stream()
-                .map(cq -> cq.getQuestion().getId())
-                .collect(Collectors.toList());
-
-        if (questionIds.isEmpty()) return List.of();
-
-        Set<Long> myAnsweredQuestionIds = answerRepository.findAllByUserAndQuestionIds(user, questionIds).stream()
-                .map(a -> a.getQuestion().getId())
-                .collect(Collectors.toSet());
-
-        Set<Long> partnerAnsweredQuestionIds = answerRepository.findAllByUserAndQuestionIds(partner, questionIds).stream()
-                .map(a -> a.getQuestion().getId())
-                .collect(Collectors.toSet());
-
-        return questions.stream()
-                .map(cq -> ArchiveSummaryResponse.builder()
-                        .questionId(cq.getQuestion().getId())
-                        .questionContent(cq.getQuestion().getContent())
-                        .date(cq.getAssignedDate())
-                        .myAnswered(myAnsweredQuestionIds.contains(cq.getQuestion().getId()))
-                        .partnerAnswered(partnerAnsweredQuestionIds.contains(cq.getQuestion().getId()))
-                        .build())
-                .collect(Collectors.toList());
+        // [고도화]: 자바 루프 없이 DB에서 DTO 리스트를 한꺼번에 뽑아옵니다.
+        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), year, month);
     }
 
     /**
@@ -84,16 +60,19 @@ public class ArchiveService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
+        // 1. 해당 질문이 우리 커플에게 배정된 이력이 있는지 검증
         List<CoupleQuestion> history = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple);
         CoupleQuestion targetCq = history.stream()
                 .filter(cq -> cq.getQuestion().getId().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
+        // 2. 답변 데이터 조회
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, targetCq.getQuestion()).orElse(null);
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         Answer partnerAnswer = answerRepository.findByUserAndQuestion(partner, targetCq.getQuestion()).orElse(null);
 
+        // 3. 열람 권한 체크
         boolean isRevealed = false;
         if (myAnswer != null && partnerAnswer != null) {
             isRevealed = couple.isSubscribed() || answerRevealRepository.existsByUserAndAnswer(user, partnerAnswer);
@@ -101,7 +80,7 @@ public class ArchiveService {
 
         return ArchiveDetailResponse.builder()
                 .questionContent(targetCq.getQuestion().getContent())
-                .category(targetCq.getQuestion().getCategory()) // Enum 타입 그대로 반환
+                .category(targetCq.getQuestion().getCategory())
                 .date(targetCq.getAssignedDate())
                 .myAnswer(myAnswer == null ? null : convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))
