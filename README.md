@@ -1,49 +1,57 @@
-# 🔓 un:lock (언락) - 우리만의 은밀한 대화
+# 🔓 un:lock (언락) - 프라이빗 커플 대화 서비스
 
 > **"답변을 완료해야만 열리는 상대방의 진심"**  
-> 커플들이 하루에 한 번 제공되는 맞춤형 질문에 답변하며, 서로의 깊은 취향과 가치관을 알아가는 프라이빗 커플 서비스입니다.
+> un:lock은 커플들이 하루에 한 번 제공되는 질문에 답변하며 서로의 은밀한 취향과 깊은 가치관을 알아가는 **프라이빗 커플 상호작용 플랫폼**입니다. 단순히 기능을 구현하는 것을 넘어, **데이터의 무결성, 보안성, 그리고 분산 환경에서의 고가용성**을 목표로 설계되었습니다.
 
 ---
 
-## 🚀 프로젝트 핵심 가치 (Core Features)
+## 🏗 프로젝트 핵심 가치 & 도메인 전략
 
-### 1. Reciprocity (상호성 기반의 소통)
-- **Mutual Disclosure**: 내가 답변을 등록해야만 파트너의 답변 영역이 활성화됩니다.
-- **Unlock Mechanism**: 광고 시청이나 구독을 통해 잠겨있는 파트너의 답변을 해제하는 수익 모델이 연동되어 있습니다.
+### 1. Reciprocity (상호 답변 기반의 공개 정책)
+- **Problem**: 한쪽만 일방적으로 답변을 확인하고 대화가 단절되는 현상 방지.
+- **Solution**: '상호 공개 원칙'을 코드 레벨에서 구현. 내가 답변을 등록해야만 파트너의 답변 영역이 활성화되며, 광고 시청 또는 구독 상태에 따라 최종 Unlock 되는 수익 모델 연동.
 
-### 2. Intelligent Scheduling (스마트한 질문 배정)
-- **Custom Notification**: 커플마다 원하는 알림 시간을 설정하여 개인화된 경험을 제공합니다.
-- **Automatic Migration**: 미완료된 질문이 있을 경우, 새로운 질문을 배정하는 대신 기존 질문의 날짜를 오늘로 이동시켜 대화의 연속성을 보장합니다.
+### 2. Intelligent Scheduling & Migration
+- **Adaptive Questions**: 커플별 설정 시간에 맞춰 랜덤 질문 배정.
+- **Zero-Stress Flow**: 답변을 미루더라도 질문이 쌓여 사용자에게 부담을 주지 않도록, 미완료 질문의 날짜를 오늘로 자동 갱신(Migration)하여 대화의 연속성 유지.
 
-### 3. Privacy & Security (프라이버시 보호)
-- **Immediate Data Destruction**: 커플 해제 또는 회원 탈퇴 시, 모든 답변과 열람 기록을 즉시 영구 파기(Hard Delete)하여 민감한 정보를 철저히 보호합니다.
-- **Secure Authentication**: HttpOnly 쿠키와 Refresh Token Rotation을 통해 보안 수준을 극대화했습니다.
-
----
-
-## 🏗 Key Technical Highlights
-
-### 🛡 분산 환경에서의 스케줄러 정밀 제어
-- **Redis Distributed Lock**: 도커 컨테이너 다중화 환경에서 스케줄러가 중복 실행되는 문제를 `SET NX` 방식의 분산 락으로 해결했습니다.
-- **Clock Skew Handling**: 0.001초 단위의 시계 오차로 인한 시간 밀림 및 누락 현상을 **1초 보정(Rounding) 로직**을 도입하여 완벽히 극대화했습니다.
-
-### ⚡ 효율적인 아카이브 시스템 (Frontend Friendly)
-- **Summary API**: 캘린더 구성을 위해 특정 월의 답변 여부만 빠르게 반환하는 요약 API를 구축하여 프론트엔드 성능을 최적화했습니다.
-- **Secure Detail View**: 아카이브 조회 시에도 서비스의 핵심 정책(상호 답변 완료 여부 등)을 동일하게 검증하여 데이터 보안을 유지합니다.
+### 3. Privacy-First Architecture
+- **Complete Destruction**: 커플 해제 또는 회원 탈퇴 시, 모든 대화 기록 및 열람 이력을 즉시 영구 파기(Hard Delete)하여 민감 정보를 철저히 보호.
 
 ---
 
-## 🛠 Tech Stack
-- **Backend**: Java 21, Spring Boot 4.0.2 (Standard)
-- **Database**: PostgreSQL (Persistence), Redis (Auth / Lock / Cache)
-- **Security**: Spring Security, JWT, BCrypt, HttpOnly Cookie
-- **Infrastructure**: Docker, Nginx (Load Balancer), Multi-Scale Environment
+## 🧠 Technical Challenges & Solutions (Hiring Highlights)
+
+### 🛡 1. 분산 환경에서의 스케줄러 동기화 및 오차 보정
+- **Challenge**: 다중 인스턴스(Multi-instance) 도커 환경에서 밀리초 단위의 시계 오차로 인해 질문 배정 로직이 중복 실행되거나 누락되는 현상 발생.
+- **Solution**: 
+    - **Redis Distributed Lock**: `SET NX` 기반의 분산 락을 도입하여 특정 분(`yyyyMMddHHmm`)에 대해 클러스터 내 단 하나의 작업만 실행되도록 보장.
+    - **Clock Skew Handling**: `1초 Rounding` 보정 로직을 적용하여 0.001초 차이로 인한 시간 밀림 현상 근본적 해결.
+
+### ⚡ 2. JPA N+1 문제 해결 및 조회 성능 98% 개선
+- **Challenge**: 월별 아카이브 조회 시 질문 목록과 각 유저의 답변 여부를 각각 조회하여 쿼리 횟수가 `1 + 2N`으로 폭증(성능 병목).
+- **Solution**: 
+    - **Querydsl DTO Projections**: 조인 쿼리 한 번으로 질문 정보와 나/파트너의 답변 존재 여부(Boolean)를 즉시 가공하여 조회하도록 리팩토링.
+    - **Result**: 한 달 조회 기준 쿼리 발생 횟수를 **61회에서 1회로 단축**, DB I/O 부하를 획기적으로 개선.
+
+### 🔐 3. 보안 인증 체계 및 협업 효율화
+- **Secure Auth**: `HttpOnly Cookie`와 `Refresh Token Rotation`을 적용하여 XSS 공격 방어 및 토큰 탈취 시나리오 대응.
+- **Swagger Documentation**: 모든 API에 대해 명시적 응답 타입 매핑과 실전 예시 데이터(@Schema)를 제공하여 프론트엔드와의 계약(Contract)을 명확히 함.
+
+---
+
+## 🛠 Tech Stack (Confirmed Specs)
+- **Framework**: `Spring Boot 3.3.4`, `Java 21`
+- **ORM & Query**: `Spring Data JPA`, `Querydsl 5.0.0 (Jakarta)`
+- **Database**: `PostgreSQL 16`, `Redis 7`
+- **Security**: `Spring Security 6.x`, `JWT (jjwt 0.12.6)`, `BCrypt`, `OAuth2`
+- **Infrastructure**: `Docker & Docker Compose`, `Nginx (Load Balancer)`, `M1 Pro (ARM64)` 최적화 빌드
 
 ---
 
 ## 🌐 Infrastructure Architecture
-- **Load Balancing**: Nginx를 Entry Point로 배치하여 운영 서버 3대 간의 부하 분산 및 Fast Failover를 구현했습니다.
-- **Environment Isolation**: `.env.prod`와 `.env.dev` 설정을 분리하여 하나의 호스트에서 운영과 개발 환경을 독립적으로 관리합니다.
+- **High Availability**: Nginx를 Entry Point로 배치, 운영 서버 3대 간의 **Round-robin 로드밸런싱** 및 **Fast Failover** 구현.
+- **Isolated Environment**: 하나의 호스트 내에서 `.env.prod`와 `.env.dev` 설정을 분리하여 운영/개발 환경을 컨테이너 단위로 완벽 격리.
 
 ---
 
@@ -73,11 +81,6 @@ erDiagram
         boolean is_subscribed
         time notification_time
     }
-    QUESTIONS {
-        long id PK
-        text content
-        string category
-    }
     COUPLE_QUESTIONS {
         long id PK
         long couple_id FK
@@ -91,17 +94,3 @@ erDiagram
         text content
     }
 ```
-
-### 주요 도메인 구조
-- **Users & Couples**: 1:1 매칭 구조 및 유저별 고유 초대 코드 관리.
-- **Questions**: 카테고리별 질문 풀(Pool) 관리.
-- **CoupleQuestions**: 커플별 랜덤 질문 배정 기록 및 날짜 Migration 관리.
-- **Answers & Reveals**: 답변 데이터 및 광고/구독 기반 열람 권한(Unlock) 기록.
-
----
-
-## 🔑 주요 API 플로우
-1. **커플 매칭**: 초대 코드 발송 -> Redis 기반 신청 대기 -> 상대방 수락 -> 연결 완료.
-2. **질문 배정**: 스케줄러가 정해진 시간에 미완료 질문 체크 또는 새 질문 랜덤 추출.
-3. **답변/열람**: 내 답변 작성 -> 광고 시청/구독 체크 -> 상대방 답변 Unlock.
-4. **기록 확인**: 월별 아카이브 조회 -> 캘린더 점(Dot) 표시 -> 상세 내용 복기.
