@@ -36,5 +36,5 @@ public class Question extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private QuestionCategory category; // 질문 카테고리
+    private QuestionCategory category; // 질문 카테고리 (Enum 적용)
 }

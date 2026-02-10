@@ -55,13 +55,11 @@ public class QuestionService {
     public Question assignQuestionToCouple(Couple couple) {
         LocalDate today = LocalDate.now();
 
-        // 1. 이미 오늘 배정 완료된 경우
         Optional<CoupleQuestion> todayRecord = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, today);
         if (todayRecord.isPresent()) {
             return todayRecord.get().getQuestion();
         }
 
-        // 2. 미완료 질문이 있는지 확인 후 이동(Migration) 처리
         Optional<CoupleQuestion> lastRecord = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple);
         
         if (lastRecord.isPresent()) {
@@ -76,7 +74,6 @@ public class QuestionService {
             }
         }
 
-        // 3. 완전히 새로운 질문 랜덤 배정
         Question randomQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
@@ -91,11 +88,14 @@ public class QuestionService {
         return randomQuestion;
     }
 
+    /**
+     * Entity -> DTO 변환 (Enum 타입 그대로 반환)
+     */
     private QuestionResponse convertToResponse(Question question, boolean isAnswered) {
         return QuestionResponse.builder()
                 .id(question.getId())
                 .content(question.getContent())
-                .category(question.getCategory().getDescription())
+                .category(question.getCategory()) // .getDescription() 제거
                 .isAnswered(isAnswered)
                 .build();
     }
