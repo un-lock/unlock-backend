@@ -7,6 +7,8 @@ import com.unlock.api.domain.answer.dto.AnswerDto.TodayAnswerResponse;
 import com.unlock.api.domain.answer.service.AnswerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,8 @@ public class AnswerController {
 
     private final AnswerService answerService;
 
-    @Operation(summary = "오늘의 답변 등록", description = "오늘 배정된 질문에 대해 답변을 등록합니다. (중복 등록 불가)")
+    @Operation(summary = "오늘의 답변 등록")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "등록 성공")
     @PostMapping
     public ApiResponse<Void> submitAnswer(
             @Parameter(hidden = true) @CurrentUser Long userId,
@@ -37,13 +40,16 @@ public class AnswerController {
         return ApiResponse.success("답변이 등록되었습니다.", null);
     }
 
-    @Operation(summary = "오늘의 답변 현황 조회", description = "나와 파트너의 오늘 답변 상태를 조회합니다. (본인 미작성 시 파트너 답변 차단)")
+    @Operation(summary = "오늘의 답변 현황 조회")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = TodayAnswerResponse.class)))
     @GetMapping("/today")
     public ApiResponse<TodayAnswerResponse> getTodayAnswers(@Parameter(hidden = true) @CurrentUser Long userId) {
         return ApiResponse.success("오늘의 답변 조회 성공", answerService.getTodayAnswers(userId));
     }
 
-    @Operation(summary = "파트너 답변 잠금 해제 (Reveal)", description = "광고 시청 완료 후 파트너의 답변 잠금을 해제합니다.")
+    @Operation(summary = "파트너 답변 잠금 해제 (Reveal)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "공개 성공")
     @PostMapping("/{answerId}/reveal")
     public ApiResponse<Void> revealPartnerAnswer(
             @Parameter(hidden = true) @CurrentUser Long userId,

@@ -4,6 +4,7 @@ import com.unlock.api.common.dto.ApiResponse;
 import com.unlock.api.common.security.annotation.CurrentUser;
 import com.unlock.api.domain.auth.dto.AuthDto.EmailRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.LoginRequest;
+import com.unlock.api.domain.auth.dto.AuthDto.ReissueRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SignupRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SocialLoginRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
@@ -14,6 +15,8 @@ import com.unlock.api.domain.auth.service.EmailService;
 import com.unlock.api.domain.user.entity.AuthProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,28 +43,33 @@ public class AuthController {
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
     private static final long REFRESH_TOKEN_MAX_AGE = 14 * 24 * 60 * 60; // 14일
 
-    @Operation(summary = "이메일 인증번호 발송", description = "사용자 이메일로 6자리 인증번호를 전송합니다. (중복 가입 체크 포함)")
+    @Operation(summary = "이메일 인증번호 발송", description = "사용자 이메일로 6자리 인증번호를 전송합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "발송 성공")
     @PostMapping("/email/request")
     public ApiResponse<Void> requestEmailCode(@RequestBody @Valid EmailRequest request) {
         emailService.sendVerificationEmail(request.getEmail());
         return ApiResponse.success("인증번호가 발송되었습니다.", null);
     }
 
-    @Operation(summary = "이메일 인증번호 확인", description = "발송된 인증번호와 입력값을 대조하여 확인합니다.")
+    @Operation(summary = "이메일 인증번호 확인", description = "발송된 인증번호를 확인합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 성공")
     @PostMapping("/email/verify")
     public ApiResponse<Void> verifyEmailCode(@RequestBody @Valid VerifyRequest request) {
         emailService.verifyCode(request.getEmail(), request.getCode());
         return ApiResponse.success("인증에 성공하였습니다.", null);
     }
 
-    @Operation(summary = "이메일 회원가입", description = "이메일 인증 완료 후 최종 회원가입을 수행합니다.")
+    @Operation(summary = "이메일 회원가입", description = "최종 회원가입을 수행합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "가입 성공")
     @PostMapping("/signup")
     public ApiResponse<Void> signup(@RequestBody @Valid SignupRequest request) {
         authService.signup(request);
         return ApiResponse.success("회원가입에 성공하였습니다.", null);
     }
 
-    @Operation(summary = "이메일 로그인", description = "이메일과 비밀번호로 로그인하여 토큰을 발급받습니다.")
+    @Operation(summary = "이메일 로그인", description = "이메일 로그인 후 토큰을 발급받습니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/login")
     public ApiResponse<TokenResponse> login(@RequestBody @Valid LoginRequest request, HttpServletResponse response) {
         LoginDto loginDto = authService.login(request);
@@ -69,7 +77,9 @@ public class AuthController {
         return ApiResponse.success("로그인 성공", loginDto.toTokenResponse());
     }
 
-    @Operation(summary = "토큰 재발급", description = "쿠키의 RefreshToken을 이용해 새로운 AccessToken을 발급받습니다.")
+    @Operation(summary = "토큰 재발급", description = "AccessToken을 재발급받습니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재발급 성공",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/reissue")
     public ApiResponse<TokenResponse> reissue(
             @Parameter(hidden = true) @CookieValue(value = REFRESH_TOKEN_COOKIE_NAME) String refreshToken,
@@ -79,7 +89,8 @@ public class AuthController {
         return ApiResponse.success("토큰 재발급 성공", loginDto.toTokenResponse());
     }
 
-    @Operation(summary = "로그아웃", description = "서버의 RefreshToken을 폐기하고 쿠키를 삭제합니다.")
+    @Operation(summary = "로그아웃", description = "로그아웃 처리를 수행합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@Parameter(hidden = true) @CurrentUser Long userId, HttpServletResponse response) {
         authService.logout(userId);
@@ -87,7 +98,9 @@ public class AuthController {
         return ApiResponse.success("로그아웃 성공", null);
     }
 
-    @Operation(summary = "카카오 로그인", description = "카카오 AccessToken으로 서비스 로그인을 수행합니다.")
+    @Operation(summary = "카카오 로그인", description = "카카오 소셜 로그인을 수행합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/kakao")
     public ApiResponse<TokenResponse> kakaoLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
         LoginDto loginDto = authService.socialLogin(AuthProvider.KAKAO, request.getToken());
