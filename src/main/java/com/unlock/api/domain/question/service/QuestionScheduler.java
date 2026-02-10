@@ -49,7 +49,10 @@ public class QuestionScheduler {
 
         log.info("[스케줄러] {}쌍의 커플 알림 처리 시작 (타겟: {})", targetCouples.size(), targetTime);
 
-        for (Couple couple : targetCouples) {
+        // 2. 해당 시간이 알림 시간인 커플 조회 (User 정보까지 fetch join으로 한 번에 조회)
+        List<Couple> targetCouplesFetch = coupleRepository.findAllByNotificationTimeWithUsers(targetTime);
+
+        for (Couple couple : targetCouplesFetch) {
             try {
                 // 1. 현재 오늘 자로 배정된 질문이 있는지 사전 확인
                 LocalDate today = LocalDate.now();
