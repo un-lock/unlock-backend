@@ -57,7 +57,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. 실제 맥북 경로로 이동 (창브로님 바탕화면 경로)
+            # [필수] 알려주신 /usr/local/bin 경로를 포함하여 PATH 강제 설정
+            export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+            
+            # 1. 실제 맥북 경로로 이동
             PROJECT_PATH="/Users/changbro/Desktop/unlock-backend"
             mkdir -p $PROJECT_PATH
             cd $PROJECT_PATH
@@ -83,7 +86,12 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
             # 4. [무중단 배포] app 서비스만 업데이트
-            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
+            # docker-compose가 안될 경우 docker compose로 시도하도록 유연하게 대응
+            if command -v docker-compose &> /dev/null; then
+              docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
+            else
+              docker compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
+            fi
             
             # 5. Nginx 설정 재로딩
             docker exec unlock-nginx-$TAG nginx -s reload || true
