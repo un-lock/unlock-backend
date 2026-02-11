@@ -57,15 +57,16 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # [필수] 알려주신 /usr/local/bin 경로를 포함하여 PATH 강제 설정
+            # 1. 경로 및 명령어 환경 설정
             export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-            
-            # 1. 실제 맥북 경로로 이동
             PROJECT_PATH="/Users/changbro/Desktop/unlock-backend"
             mkdir -p $PROJECT_PATH
             cd $PROJECT_PATH
             
-            # 2. 브랜치에 따른 환경 설정
+            # 2. [중요] 맥북 Keychain 이슈 해결을 위한 재로그인
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
+            # 3. 브랜치별 환경 설정
             if [ "${{ github.ref_name }}" = "main" ]; then
               TAG="prod"
               SCALE=3
@@ -82,19 +83,18 @@ jobs:
             EOF
             fi
             
-            # 3. 최신 이미지 Pull
+            # 4. 최신 이미지 Pull
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
-            # 4. [무중단 배포] app 서비스만 업데이트
-            # docker-compose가 안될 경우 docker compose로 시도하도록 유연하게 대응
-            if command -v docker-compose &> /dev/null; then
-              docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
-            else
-              docker compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
-            fi
+            # 5. [무중단 배포] 실행
+            COMPOSE_CMD="docker-compose"
+            command -v docker-compose &> /dev/null || COMPOSE_CMD="docker compose"
             
-            # 5. Nginx 설정 재로딩
+            $COMPOSE_CMD --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
+            
+            # 6. Nginx 및 이미지 정리
             docker exec unlock-nginx-$TAG nginx -s reload || true
-            
-            # 6. 구버전 이미지 정리
             docker image prune -f
+            
+            # 7. 보안을 위해 로그아웃 (선택사항)
+            docker logout
