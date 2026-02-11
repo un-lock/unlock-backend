@@ -28,7 +28,7 @@ jobs:
       - name: Extract Metadata
         id: meta
         run: |
-          if [ "${{ github.ref_name }}" == "main" ]; then
+          if [ "${{ github.ref_name }}" = "main" ]; then
             echo "TAG=prod" >> $GITHUB_OUTPUT
             echo "SCALE=3" >> $GITHUB_OUTPUT
           else
@@ -57,31 +57,35 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. 프로젝트 디렉토리 이동
-            cd ~/IdeaProjects/unlock-backend
+            # 1. 실제 맥북 경로로 이동 (창브로님 바탕화면 경로)
+            PROJECT_PATH="/Users/changbro/Desktop/unlock-backend"
+            mkdir -p $PROJECT_PATH
+            cd $PROJECT_PATH
             
             # 2. 브랜치에 따른 환경 설정
-            if [ "${{ github.ref_name }}" == "main" ]; then
+            if [ "${{ github.ref_name }}" = "main" ]; then
               TAG="prod"
               SCALE=3
               ENV_FILE=".env.prod"
-              echo "${{ secrets.ENV_PROD }}" > .env.prod
+              cat << 'EOF' > .env.prod
+            ${{ secrets.ENV_PROD }}
+            EOF
             else
               TAG="dev"
               SCALE=1
               ENV_FILE=".env.dev"
-              echo "${{ secrets.ENV_DEV }}" > .env.dev
+              cat << 'EOF' > .env.dev
+            ${{ secrets.ENV_DEV }}
+            EOF
             fi
             
             # 3. 최신 이미지 Pull
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
-            # 4. [무중단 배포 핵심]
-            # --no-recreate: 이미 떠 있는 DB, Redis, Nginx는 건드리지 않음
-            # app 서비스만 지정하여 해당 이미지만 업데이트 및 스케일링 적용
+            # 4. [무중단 배포] app 서비스만 업데이트
             docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
             
-            # 5. Nginx 설정 재로딩 (혹시 모를 업스트림 변경 대비)
+            # 5. Nginx 설정 재로딩
             docker exec unlock-nginx-$TAG nginx -s reload || true
             
             # 6. 구버전 이미지 정리
