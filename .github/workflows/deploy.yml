@@ -99,14 +99,13 @@ jobs:
             EOF
             fi
             
-            # [핵심 수정] Docker Hub에서 최신 이미지를 가져옵니다.
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
-            # [핵심 수정] --build 옵션을 제거하여 맥북에서 이미지를 다시 굽지 않도록 합니다.
-            # 이미 Docker Hub에서 최신 이미지를 pull 받았으므로, 그대로 실행만 하면 됩니다.
-            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --scale app=$SCALE app
+            # [최고 안정성 방식]
+            # 1. 앱과 Nginx만 콕 집어서 업데이트 시도 (DB/Redis는 건드리지 않음)
+            # 2. 만약 DB/Redis가 꺼져있다면 알아서 켜주기도 함
+            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --scale app=$SCALE app nginx
             
-            # Nginx 갱신
             docker exec unlock-nginx-$TAG nginx -s reload || true
             docker image prune -f
             docker logout
