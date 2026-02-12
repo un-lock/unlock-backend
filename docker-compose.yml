@@ -12,10 +12,10 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    # [최종] 헷갈리는 TAG 대신 이미 존재하는 ENV 변수를 사용하여 이미지를 참조합니다.
+    image: ${DOCKER_USERNAME}/unlock-backend:${ENV:-dev}
     expose:
       - "8080"
-    # [핵심 추가] Nginx가 프로젝트 이름과 상관없이 'app'이라는 이름으로 찾을 수 있게 별칭을 부여합니다.
     networks:
       default:
         aliases:
@@ -33,6 +33,7 @@ services:
       - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY}
       - JWT_REFRESH_TOKEN_VALIDITY=${JWT_REFRESH_TOKEN_VALIDITY}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
     depends_on:
@@ -45,7 +46,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s
 
   db:
     image: postgres:16-alpine
