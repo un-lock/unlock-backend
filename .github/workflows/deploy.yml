@@ -60,7 +60,7 @@ jobs:
             export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
             PROJECT_PATH="/Users/changbro/Desktop/unlock-backend"
             
-            # 1. 프로젝트 폴더로 이동하여 '코드 최신화'
+            # [핵심] 맥북 서버의 docker-compose.yml을 깃허브 최신본으로 덮어씁니다.
             if [ -d "$PROJECT_PATH/.git" ]; then
               cd $PROJECT_PATH
               git fetch origin
@@ -71,10 +71,10 @@ jobs:
               git clone -b ${{ github.ref_name }} https://github.com/${{ github.repository }}.git .
             fi
             
-            # 2. 도커 재로그인
+            # 도커 재로그인
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
             
-            # 3. 브랜치별 환경 설정 (실시간 파일 생성)
+            # 환경 변수 파일 실시간 생성
             if [ "${{ github.ref_name }}" = "main" ]; then
               TAG="prod"
               SCALE=3
@@ -91,15 +91,10 @@ jobs:
             EOF
             fi
             
-            # 4. 최신 이미지 Pull
+            # 이미지 Pull 및 실행 (--no-recreate 제거하여 설정 변경사항 즉시 반영)
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
+            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --scale app=$SCALE app
             
-            # 5. [무중단 배포] 실행 (이제 최신 docker-compose.yml을 사용합니다!)
-            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
-            
-            # 6. Nginx 및 이미지 정리
             docker exec unlock-nginx-$TAG nginx -s reload || true
             docker image prune -f
-            
-            # 7. 로그아웃
             docker logout
