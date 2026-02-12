@@ -11,23 +11,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Java 셋팅
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle' # Gradle 라이브러리 캐시 자동 활성화
+          cache: 'gradle'
 
-      # 2. [초고속 핵심] GitHub 서버에서 직접 Gradle 빌드
-      # 도커 내부(QEMU)가 아닌 네이티브 환경에서 빌드하므로 압도적으로 빠릅니다.
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build with Gradle
         run: ./gradlew build -x test --no-daemon
 
-      # 3. Docker Buildx 설정 (멀티 플랫폼)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -51,7 +47,6 @@ jobs:
             echo "SCALE=1" >> $GITHUB_OUTPUT
           fi
 
-      # 4. [초고속 핵심] 도커 이미지는 '포장'만 수행
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -104,8 +99,14 @@ jobs:
             EOF
             fi
             
+            # [핵심 수정] Docker Hub에서 최신 이미지를 가져옵니다.
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
-            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --build --scale app=$SCALE
+            
+            # [핵심 수정] --build 옵션을 제거하여 맥북에서 이미지를 다시 굽지 않도록 합니다.
+            # 이미 Docker Hub에서 최신 이미지를 pull 받았으므로, 그대로 실행만 하면 됩니다.
+            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --scale app=$SCALE app
+            
+            # Nginx 갱신
             docker exec unlock-nginx-$TAG nginx -s reload || true
             docker image prune -f
             docker logout
