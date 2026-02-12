@@ -21,8 +21,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # [강력 조치] clean을 추가하여 이전 빌드 잔상을 완전히 지우고 새로 컴파일합니다.
       - name: Build with Gradle
-        run: ./gradlew build -x test --no-daemon
+        run: ./gradlew clean build -x test --no-daemon
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -47,6 +48,7 @@ jobs:
             echo "SCALE=1" >> $GITHUB_OUTPUT
           fi
 
+      # [강력 조치] no-cache 옵션과 빌드 아규먼트를 추가하여 도커가 무조건 새 jar를 담게 합니다.
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -54,6 +56,9 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/unlock-backend:${{ steps.meta.outputs.TAG }}
+          no-cache: true
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -101,10 +106,8 @@ jobs:
             
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
-            # [최고 안정성 방식]
-            # 1. 앱과 Nginx만 콕 집어서 업데이트 시도 (DB/Redis는 건드리지 않음)
-            # 2. 만약 DB/Redis가 꺼져있다면 알아서 켜주기도 함
-            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --scale app=$SCALE app nginx
+            # [강력 조치] 무조건 이미지를 새로 교체하도록 강제합니다.
+            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --force-recreate --scale app=$SCALE app nginx
             
             docker exec unlock-nginx-$TAG nginx -s reload || true
             docker image prune -f
