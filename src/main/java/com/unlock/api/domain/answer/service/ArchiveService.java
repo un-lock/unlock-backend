@@ -18,9 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 아카이브(기록장) 조회 비즈니스 로직 서비스
@@ -36,10 +34,10 @@ public class ArchiveService {
     private final UserRepository userRepository;
 
     /**
-     * 전체 아카이브 목록 조회 (최신순)
-     * - 캘린더 구성을 위해 날짜, 질문ID, 두 사람의 답변 여부 반환
+     * 월별 아카이브 요약 목록 조회 (캘린더용)
+     * [최고 성능 최적화]: Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
      */
-    public List<ArchiveSummaryResponse> getArchiveList(Long userId) {
+    public List<ArchiveSummaryResponse> getMonthlyArchive(Long userId, int year, int month) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -48,22 +46,12 @@ public class ArchiveService {
 
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
-        return coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple)
-                .stream()
-                .map(cq -> ArchiveSummaryResponse.builder()
-                        .questionId(cq.getQuestion().getId())
-                        .questionContent(cq.getQuestion().getContent())
-                        .date(cq.getAssignedDate())
-                        .myAnswered(answerRepository.existsByUserAndQuestion(user, cq.getQuestion()))
-                        .partnerAnswered(answerRepository.existsByUserAndQuestion(partner, cq.getQuestion()))
-                        .build())
-                .collect(Collectors.toList());
+        // [고도화]: 자바 루프 없이 DB에서 DTO 리스트를 한꺼번에 뽑아옵니다.
+        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), year, month);
     }
 
     /**
      * 아카이브 상세 조회
-     * - 특정 질문에 대한 두 사람의 답변 상세 내용 반환
-     * - 잠금 로직(본인 미등록 시 차단, 광고/구독 체크) 동일 적용
      */
     public ArchiveDetailResponse getArchiveDetail(Long userId, Long questionId) {
         User user = userRepository.findById(userId)
@@ -72,17 +60,15 @@ public class ArchiveService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 해당 커플에게 배정된 질문인지 검증하며 조회
+        // 1. 해당 질문이 우리 커플에게 배정된 이력이 있는지 검증
         List<CoupleQuestion> history = coupleQuestionRepository.findAllByCoupleOrderByAssignedDateDesc(couple);
         CoupleQuestion targetCq = history.stream()
                 .filter(cq -> cq.getQuestion().getId().equals(questionId))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
-        // 1. 내 답변 조회
+        // 2. 답변 데이터 조회
         Answer myAnswer = answerRepository.findByUserAndQuestion(user, targetCq.getQuestion()).orElse(null);
-        
-        // 2. 파트너 정보 및 답변 조회
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         Answer partnerAnswer = answerRepository.findByUserAndQuestion(partner, targetCq.getQuestion()).orElse(null);
 
@@ -94,7 +80,7 @@ public class ArchiveService {
 
         return ArchiveDetailResponse.builder()
                 .questionContent(targetCq.getQuestion().getContent())
-                .category(targetCq.getQuestion().getCategory().getDescription())
+                .category(targetCq.getQuestion().getCategory())
                 .date(targetCq.getAssignedDate())
                 .myAnswer(myAnswer == null ? null : convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))

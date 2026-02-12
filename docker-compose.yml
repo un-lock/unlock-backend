@@ -7,45 +7,66 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     restart: unless-stopped
 
   app:
-    build: .
+    # [최종] 헷갈리는 TAG 대신 이미 존재하는 ENV 변수를 사용하여 이미지를 참조합니다.
+    image: ${DOCKER_USERNAME}/unlock-backend:${ENV:-dev}
     expose:
       - "8080"
+    networks:
+      default:
+        aliases:
+          - app
     environment:
-      # 포트 번호까지 .env 변수를 활용해 동적으로 조립 (5432 고정 해제)
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:${DB_INTERNAL_PORT:-5432}/${DB_NAME}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${DB_NAME}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=${REDIS_INTERNAL_PORT:-6379}
+      - SPRING_DATA_REDIS_PORT=6379
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ACCESS_TOKEN_VALIDITY=${JWT_ACCESS_TOKEN_VALIDITY}
       - JWT_REFRESH_TOKEN_VALIDITY=${JWT_REFRESH_TOKEN_VALIDITY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
+    volumes:
+      - ~/logs/unlock-app/${ENV:-dev}:/logs
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v3/api-docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   db:
     image: postgres:16-alpine
     container_name: unlock-db-${ENV:-dev}
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - db
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ~/db-data/postgres/${ENV:-dev}:/var/lib/postgresql/data
     ports:
-      - "${DB_PORT:-5432}:${DB_INTERNAL_PORT:-5432}"
+      - "${DB_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d ${DB_NAME} -U ${DB_USERNAME}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -54,8 +75,14 @@ services:
     container_name: unlock-redis-${ENV:-dev}
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      default:
+        aliases:
+          - redis
+    volumes:
+      - ~/db-data/redis/${ENV:-dev}:/data
     ports:
-      - "${REDIS_PORT:-6379}:${REDIS_INTERNAL_PORT:-6379}"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 10s
