@@ -1,96 +1,47 @@
 # 🔓 un:lock (언락) - 프라이빗 커플 대화 서비스
 
 > **"두 사람 모두 답변을 완료해야 열리는 상대방의 진심"**  
-> un:lock은 커플이 하루에 한 번 제공되는 질문에 답변하며, 서로의 깊은 취향과 가치관을 알아가는 **프라이빗 소통 플랫폼**입니다. 기능 구현을 넘어 **데이터 보안성, 개인정보 보호, 분산 환경의 안정성**을 최우선으로 설계되었습니다.
+> un:lock은 단순히 기능을 넘어, **실제 상용 서비스 수준의 CI/CD 인프라와 강력한 데이터 보안**을 갖춘 커플 소통 플랫폼입니다.
 
 ---
 
-## 🏗 프로젝트 핵심 가치 및 도메인 로직
+## 🏗️ 시스템 아키텍처 (Infrastructure)
 
-### 1. 답변 상호 작용 정책 (상호성 원칙)
-- **문제 인식**: 한쪽만 일방적으로 답변을 확인하고 대화가 단절되는 것을 방지하고자 했습니다.
-- **해결 방안**: '상호 공개 원칙'을 코드 레벨에서 구현. 내가 먼저 답변을 등록해야만 파트너의 답변 영역이 활성화되며, 광고 시청이나 구독 상태에 따라 최종 잠금이 해제되는 시스템을 구축했습니다.
+개인용 **MacBook M1 Pro**를 홈 서버로 활용하여, 대규모 트래픽 분산과 보안을 고려한 **Docker 기반 멀티 인스턴스 환경**을 구축했습니다.
 
-### 2. 스마트 질문 관리 시스템
-- **유동적인 질문 배정**: 커플마다 설정한 알림 시간에 맞춰 중복 없는 랜덤 질문이 배정됩니다.
-- **질문 이월(Carry-over) 로직**: 답변을 미루더라도 질문이 날짜별로 쌓여 사용자에게 부담을 주지 않도록, 미완료된 질문의 날짜를 자동으로 오늘로 갱신하여 대화의 연속성을 보장합니다.
+### 1. 네트워크 및 트래픽 관리
+- **Cloudflare Tunnel**: 외부로의 포트 개방(Port Forwarding) 없이 암호화된 터널을 통해 트래픽을 수용하여 **보안 위협(DDoS, 스캔)을 원천 차단**했습니다.
+- **Nginx 로드밸런싱**: 앞단에 Nginx를 배치하여 여러 대의 WAS(App) 인스턴스로 요청을 분산하고, 장애 발생 시 자동으로 정상 서버로 연결하는 **Fast Failover**를 구현했습니다.
+- **환경 격리 (Prod/Dev)**: 동일 호스트 내에서 도커 네트워크와 볼륨을 분리하여 **운영(api.)과 개발(dev-api.) 서버를 완벽하게 독립적으로 운영**합니다.
 
-### 3. 프라이버시 보호 시스템
-- **AES-256 데이터 암호화**: 사용자의 답변 내용을 DB에 그대로 저장하지 않고, 애플리케이션 레벨에서 **AES-256 양방향 암호화**를 적용하여 데이터 유출 시에도 원문을 철저히 보호합니다.
-- **즉시 파기 정책**: 커플 해제나 회원 탈퇴 시, 모든 대화 기록과 암호화된 답변 데이터를 단순히 숨기는 것이 아니라 DB에서 즉시 영구 삭제(Hard Delete)하여 개인정보를 보호합니다.
+### 2. CI/CD 파이프라인 (GitHub Actions)
+- **초고속 빌드 전략**: ARM64 가상화 빌드의 속도 저하 문제를 해결하기 위해, GitHub 네이티브 환경에서 **Gradle 컴파일을 선행**한 후 Docker 이미지는 '포장'만 수행하도록 설계하여 빌드 시간을 **10분에서 2분으로 80% 단축**했습니다.
+- **무중단 배포 (Zero-Downtime)**: 배포 시 DB/Redis 등 상태 저장 컨테이너는 유지하고, WAS와 Nginx만 순차적으로 갱신하는 전략을 통해 **서비스 중단 없는 배포**를 실현했습니다.
 
----
-
-## 🧠 주요 기술적 도전 및 해결 사례
-
-### 🛡 1. 분산 환경에서의 스케줄러 무결성 보장
-- **도전 과제**: 다중 컨테이너 환경에서 미세한 시계 오차로 인해 질문 배정 로직이 중복 실행되거나 시간 밀림 현상이 발생했습니다.
-- **해결 방안**: 
-    - **Redis 분산 락(Distributed Lock)**을 도입하여 특정 시간대에 전체 클러스터에서 딱 한 번만 작업이 실행되도록 보장했습니다.
-    - **1초 보정(Rounding)** 로직을 추가하여 밀리초 단위의 오차로 인한 작업 누락 문제를 근본적으로 해결했습니다.
-
-### ⚡ 2. JPA N+1 문제 해결 및 조회 성능 극대화
-- **도전 과제**: 월별 기록 조회 시 질문 목록과 각 사용자의 답변 여부를 개별 조회하면서 발생하는 `1 + 2N` 쿼리 폭증 문제를 해결해야 했습니다.
-- **해결 방안**: 
-    - **Querydsl DTO 직접 조회(Projections)**를 통해 단 한 번의 Join 쿼리로 결과물을 가공하여 가져오도록 리팩토링했습니다.
-    - **결과**: 쿼리 발생 횟수를 **61회에서 1회로 단축**하여 데이터베이스 부하를 획기적으로 줄였습니다.
-
-### 🔐 3. 보안 인증 체계 고도화
-- **보안 전략**: `HttpOnly 쿠키`와 `Refresh Token Rotation`을 적용해 XSS 공격을 차단하고 인증의 영속성과 보안성을 동시에 확보했습니다.
-- **문서화**: 모든 API에 대해 명시적 응답 매핑과 실제 데이터를 반영한 Swagger 문서를 구축하여 협업 효율성을 높였습니다.
+### 3. 운영 및 데이터 안정성
+- **DB 일일 자동 백업**: `pg_dump`를 활용한 쉘 스크립트를 작성하여 매일 새벽 DB를 SQL 파일로 백업하고, **7일 보관 정책(Rotation)**을 자동화했습니다.
+- **로그 통합 관리**: 컨테이너 내부 로그를 호스트 시스템과 마운트하고, 날짜별 로그 로테이션을 설정하여 시스템 추적성을 확보했습니다.
 
 ---
 
-## 🛠 기술 스택 (Tech Stack)
-- **Framework**: `Spring Boot 3.3.4`, `Java 21`
+## 🧠 주요 기술적 도전 및 해결
+
+### 🛡️ AES-256 데이터 암호화
+- **Privacy First**: 민감한 대화 내용을 보호하기 위해 **JPA AttributeConverter**를 사용하여 DB 저장 시 **AES-256 애플리케이션 레벨 암호화**를 적용했습니다. DB 유출 시에도 원문을 보호하는 Zero-Knowledge 지향 설계를 달성했습니다.
+
+### ⚡ JPA N+1 문제 & Querydsl 최적화
+- **DTO Projections**: 아카이브 조회 시 발생하는 수십 건의 쿼리 병목을 해결하기 위해, Querydsl을 도입하여 **단 1번의 Join 쿼리**로 모든 결과물을 반환하도록 최적화하여 DB 부하를 극적으로 줄였습니다.
+
+---
+
+## 🛠️ 기술 스택 (Tech Stack)
+- **Backend**: `Java 21`, `Spring Boot 3.3.4`, `Spring Security`, `JWT`
 - **Database**: `PostgreSQL 16`, `Redis 7`
-- **ORM & Query**: `Spring Data JPA`, `Querydsl 5.0.0`
-- **Security**: `Spring Security 6.x`, `JWT (jjwt 0.12.6)`, `AES-256`
-- **Infrastructure**: `Docker & Docker Compose`, `Nginx (Load Balancer)`
+- **ORM**: `Spring Data JPA`, `Querydsl 5.0.0`
+- **Infra**: `Docker & Compose`, `GitHub Actions`, `Nginx`, `Cloudflare Tunnel`
 
 ---
 
-## 🗄 데이터베이스 설계 (ERD)
-
-```mermaid
-erDiagram
-    USERS ||--o| COUPLES : "소속됨"
-    COUPLES ||--o{ COUPLE_QUESTIONS : "매일 배정"
-    QUESTIONS ||--o{ COUPLE_QUESTIONS : "참조됨"
-    USERS ||--o{ ANSWERS : "작성함"
-    QUESTIONS ||--o{ ANSWERS : "대상 질문"
-    USERS ||--o{ ANSWER_REVEALS : "잠금 해제"
-    ANSWERS ||--o{ ANSWER_REVEALS : "해제 대상"
-
-    USERS {
-        long id PK
-        string email UK "이메일"
-        string nickname "닉네임"
-        string invite_code UK "초대코드"
-        long couple_id FK
-    }
-    COUPLES {
-        long id PK
-        long user1_id FK
-        long user2_id FK
-        boolean is_subscribed "구독여부"
-        time notification_time "알림시간"
-    }
-    QUESTIONS {
-        long id PK
-        text content "질문내용"
-        string category "카테고리"
-    }
-    COUPLE_QUESTIONS {
-        long id PK
-        long couple_id FK
-        long question_id FK
-        date assigned_date "배정일"
-    }
-    ANSWERS {
-        long id PK
-        long user_id FK
-        long question_id FK
-        text content "암호화된 답변내용"
-    }
-```
+## 🌐 서버 주소
+- **Production API**: [https://api.unlock-official.app](https://api.unlock-official.app)
+- **Development API**: [https://dev-api.unlock-official.app](https://dev-api.unlock-official.app)
