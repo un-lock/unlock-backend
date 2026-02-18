@@ -1,6 +1,5 @@
 package com.unlock.api.common.security.config;
 
-import lombok.RequiredArgsConstructor;
 import com.unlock.api.common.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,9 +12,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Spring Security 설정 클래스
+ * - 인증/인가 정책 및 도메인별 CORS 설정을 관리합니다.
  */
 @Configuration
 @EnableWebSecurity
@@ -32,18 +38,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // REST API이므로 CSRF 보안 비활성화
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                // 폼 로그인 및 기본 HTTP 인증 비활성화
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                // 세션을 사용하지 않음 (JWT 기반)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // 요청 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // 인증 관련 API 및 Swagger 리소스는 모두 허용
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/swagger-ui/**",
@@ -51,12 +53,37 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
-                // JWT 필터 추가
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * CORS 세부 설정
+     * 서비스 도메인 및 로컬 개발 환경에서의 요청만 명시적으로 허용합니다.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // [보안 강화] 허용할 도메인(Origin) 명시
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://api.unlock-official.app",
+                "https://dev-api.unlock-official.app",
+                "http://localhost:3000",
+                "http://localhost:8080",
+                "http://localhost:8081"
+        ));
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
