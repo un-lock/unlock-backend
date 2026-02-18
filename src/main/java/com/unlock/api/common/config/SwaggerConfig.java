@@ -13,8 +13,8 @@ import java.util.List;
 
 /**
  * Swagger(springdoc) 설정 클래스
- * - 로드밸런서 환경 서버 주소 설정
- * - JWT(Bearer) 인증 버튼 추가 및 전역 적용
+ * - 개발 전용 도메인 고정
+ * - JWT(Bearer) 인증 전역 적용
  */
 @Configuration
 public class SwaggerConfig {
@@ -23,16 +23,12 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI unlockOpenAPI() {
-        // 1. 서버 주소 설정 (포트 누락 방지)
-        Server localServer = new Server();
-        localServer.setUrl("http://localhost:8080");
-        localServer.setDescription("운영(Prod) 환경 (8080)");
-
+        // [개발 전용 고정]: Swagger 호출 주소를 개발 도메인으로 단일화합니다.
         Server devServer = new Server();
-        devServer.setUrl("http://localhost:8081");
-        devServer.setDescription("개발(Dev) 환경 (8081)");
+        devServer.setUrl("https://dev-api.unlock-official.app");
+        devServer.setDescription("Development Server");
 
-        // 2. JWT 인증 설정 (상단 자물쇠 버튼 생성)
+        // JWT 인증 설정
         SecurityScheme securityScheme = new SecurityScheme()
                 .name(BEARER_AUTH)
                 .type(SecurityScheme.Type.HTTP)
@@ -44,12 +40,12 @@ public class SwaggerConfig {
         SecurityRequirement securityRequirement = new SecurityRequirement().addList(BEARER_AUTH);
 
         return new OpenAPI()
-                .servers(List.of(localServer, devServer))
+                .servers(List.of(devServer))
                 .addSecurityItem(securityRequirement)
                 .components(new Components().addSecuritySchemes(BEARER_AUTH, securityScheme))
                 .info(new Info()
-                        .title("un:lock API")
-                        .description("우리만의 은밀한 대화, un:lock 서비스의 API 문서입니다.")
+                        .title("un:lock API (Dev)")
+                        .description("우리만의 은밀한 대화, un:lock 서비스의 개발 전용 API 문서입니다.")
                         .version("v0.0.1"));
     }
 }

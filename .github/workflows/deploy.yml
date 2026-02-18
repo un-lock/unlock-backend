@@ -2,7 +2,7 @@ name: un:lock Continuous Deployment
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "master", "dev" ]
 
 jobs:
   build-and-push:
@@ -11,10 +11,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # [강력 조치] clean을 추가하여 이전 빌드 잔상을 완전히 지우고 새로 컴파일합니다.
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test --no-daemon
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-        with:
-          platforms: 'arm64'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -28,7 +40,7 @@ jobs:
       - name: Extract Metadata
         id: meta
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          if [ "${{ github.ref_name }}" = "master" ]; then
             echo "TAG=prod" >> $GITHUB_OUTPUT
             echo "SCALE=3" >> $GITHUB_OUTPUT
           else
@@ -36,6 +48,7 @@ jobs:
             echo "SCALE=1" >> $GITHUB_OUTPUT
           fi
 
+      # [강력 조치] no-cache 옵션과 빌드 아규먼트를 추가하여 도커가 무조건 새 jar를 담게 합니다.
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -43,6 +56,9 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/unlock-backend:${{ steps.meta.outputs.TAG }}
+          no-cache: true
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -57,17 +73,22 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. 경로 및 명령어 환경 설정
             export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
             PROJECT_PATH="/Users/changbro/Desktop/unlock-backend"
-            mkdir -p $PROJECT_PATH
-            cd $PROJECT_PATH
             
-            # 2. [중요] 맥북 Keychain 이슈 해결을 위한 재로그인
+            if [ -d "$PROJECT_PATH/.git" ]; then
+              cd $PROJECT_PATH
+              git fetch origin
+              git reset --hard origin/${{ github.ref_name }}
+            else
+              mkdir -p $PROJECT_PATH
+              cd $PROJECT_PATH
+              git clone -b ${{ github.ref_name }} https://github.com/${{ github.repository }}.git .
+            fi
+            
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
             
-            # 3. 브랜치별 환경 설정
-            if [ "${{ github.ref_name }}" = "main" ]; then
+            if [ "${{ github.ref_name }}" = "master" ]; then
               TAG="prod"
               SCALE=3
               ENV_FILE=".env.prod"
@@ -83,18 +104,11 @@ jobs:
             EOF
             fi
             
-            # 4. 최신 이미지 Pull
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
-            # 5. [무중단 배포] 실행
-            COMPOSE_CMD="docker-compose"
-            command -v docker-compose &> /dev/null || COMPOSE_CMD="docker compose"
+            # [강력 조치] 무조건 이미지를 새로 교체하도록 강제합니다.
+            docker-compose --env-file $ENV_FILE -p unlock-$TAG up -d --force-recreate --scale app=$SCALE app nginx
             
-            $COMPOSE_CMD --env-file $ENV_FILE -p unlock-$TAG up -d --build --no-recreate --scale app=$SCALE app
-            
-            # 6. Nginx 및 이미지 정리
             docker exec unlock-nginx-$TAG nginx -s reload || true
             docker image prune -f
-            
-            # 7. 보안을 위해 로그아웃 (선택사항)
             docker logout
