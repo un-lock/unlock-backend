@@ -82,9 +82,32 @@ public class AuthDto {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "비밀번호 찾기(인증번호 요청) 객체")
+    public static class PasswordFindRequest {
+        @Email @NotBlank
+        @Schema(description = "가입한 이메일 주소", example = "couple@example.com")
+        private String email;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "임시 비밀번호 발급 요청 객체")
+    public static class PasswordResetRequest {
+        @Email @NotBlank
+        private String email;
+        
+        @NotBlank
+        @Schema(description = "이메일로 발송된 인증번호", example = "123456")
+        private String code;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "로그아웃 요청 객체")
     public static class LogoutRequest {
-        @Schema(description = "로그아웃할 기기의 FCM 토큰 (해당 기기 알림 중단)", example = "fcm_token_sample_xyz")
+        @Schema(description = "로그아웃할 기기의 FCM 토큰", example = "fcm_token_sample_xyz")
         private String fcmToken;
     }
 
@@ -116,7 +139,7 @@ public class AuthDto {
     @AllArgsConstructor
     @Schema(description = "로그인 성공 응답 객체")
     public static class TokenResponse {
-        @Schema(description = "서비스 전용 AccessToken (Bearer 헤더에 사용)")
+        @Schema(description = "서비스 전용 AccessToken")
         private String accessToken;
         
         @Schema(description = "사용자 닉네임", example = "달콤한연인")

@@ -4,6 +4,7 @@ import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
 import com.unlock.api.common.security.jwt.JwtTokenProvider;
 import com.unlock.api.domain.auth.dto.AuthDto.LoginRequest;
+import com.unlock.api.domain.auth.dto.AuthDto.PasswordResetRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SignupRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
 import com.unlock.api.domain.auth.dto.SocialProfile;
@@ -36,13 +37,11 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RedisService redisService;
+    private final EmailService emailService; // 추가
     private final List<SocialAuthService> socialAuthServices;
 
     /**
      * 이메일 회원가입
-     * - 중복 이메일 체크
-     * - 비밀번호 암호화 저장
-     * - 가입 시 초대 코드 자동 생성
      */
     public void signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -83,9 +82,37 @@ public class AuthService {
     }
 
     /**
-     * 소셜 로그인 (Kakao, Google, Apple)
-     * - 소셜 프로필 정보 조회 후 자동 가입 또는 로그인 처리
-     * - FCM 토큰 자동 연동 (추가)
+     * 비밀번호 재설정을 위한 인증번호 발송
+     * 가입된 이메일인 경우에만 인증번호를 보냅니다.
+     */
+    public void requestPasswordResetCode(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        emailService.sendPasswordResetCode(email);
+    }
+
+    /**
+     * 인증번호 확인 후 임시 비밀번호 발급
+     */
+    public void resetPassword(PasswordResetRequest request) {
+        // 1. 인증번호 확인
+        emailService.verifyCode(request.getEmail(), request.getCode());
+
+        // 2. 유저 조회
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 3. 임시 비밀번호 생성 및 저장 (암호화)
+        String tempPassword = generateTemporaryPassword();
+        user.updatePassword(passwordEncoder.encode(tempPassword));
+
+        // 4. 이메일 발송
+        emailService.sendTemporaryPassword(request.getEmail(), tempPassword);
+    }
+
+    /**
+     * 소셜 로그인 및 FCM 토큰 등록
      */
     public LoginDto socialLogin(AuthProvider provider, String token, String fcmToken) {
         SocialAuthService socialAuthService = socialAuthServices.stream()
@@ -104,7 +131,6 @@ public class AuthService {
                         .inviteCode(generateInviteCode())
                         .build()));
 
-        // FCM 토큰 처리
         if (fcmToken != null) {
             handleFcmToken(user, fcmToken);
         }
@@ -114,8 +140,6 @@ public class AuthService {
 
     /**
      * JWT 토큰 재발급
-     * - 전달받은 Refresh Token 검증
-     * - Redis에 저장된 토큰과 대조하여 보안성 강화
      */
     public LoginDto reissue(String refreshToken) {
         if (!jwtTokenProvider.validateToken(refreshToken)) {
@@ -136,26 +160,19 @@ public class AuthService {
     }
 
     /**
-     * 로그아웃
-     * - 서버(Redis)에서 Refresh Token 폐기
-     * - 특정 기기의 FCM 토큰 해제 (추가)
+     * 로그아웃 및 특정 기기 FCM 토큰 해제
      */
     public void logout(Long userId, String fcmToken) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. Refresh Token 폐기
         redisService.deleteRefreshToken(userId);
 
-        // 2. 특정 기기의 FCM 토큰만 제거
         if (fcmToken != null) {
             fcmTokenRepository.deleteByUserAndToken(user, fcmToken);
         }
     }
 
-    /**
-     * FCM 토큰 저장 및 갱신 로직 (UPSERT)
-     */
     private void handleFcmToken(User user, String fcmToken) {
         fcmTokenRepository.findByToken(fcmToken)
                 .ifPresentOrElse(
@@ -168,9 +185,6 @@ public class AuthService {
                 );
     }
 
-    /**
-     * 서비스 내부용 토큰 및 유저 정보 DTO
-     */
     @Getter
     @Builder
     public static class LoginDto {
@@ -188,14 +202,10 @@ public class AuthService {
         }
     }
 
-    /**
-     * 토큰 생성 및 Redis 저장 공통 로직
-     */
     private LoginDto createTokenResponse(User user) {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // Refresh Token Redis 저장 (만료 시간 설정)
         redisService.saveRefreshToken(user.getId(), refreshToken, jwtTokenProvider.getRefreshTokenValidityInMilliseconds());
 
         return LoginDto.builder()
@@ -206,10 +216,14 @@ public class AuthService {
                 .build();
     }
 
-    /**
-     * 8자리 대문자 초대 코드 생성
-     */
     private String generateInviteCode() {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * 임시 비밀번호 생성 (8자리 랜덤 문자열)
+     */
+    private String generateTemporaryPassword() {
+        return UUID.randomUUID().toString().substring(0, 8);
     }
 }

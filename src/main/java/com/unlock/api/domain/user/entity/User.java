@@ -72,6 +72,13 @@ public class User extends BaseTimeEntity {
     }
 
     /**
+     * 비밀번호를 새로운 값으로 업데이트합니다. (재설정 시 사용)
+     */
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
+    /**
      * 초대 코드를 새로운 값으로 갱신합니다. (커플 해제 시 사용)
      */
     public void updateInviteCode(String inviteCode) {
