@@ -181,7 +181,8 @@ public class CoupleService {
 
         log.info("[BREAKUP] 커플(ID:{})의 모든 기록이 성공적으로 삭제되었습니다.", couple.getId());
         
-        // TODO: [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
+        // [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
+        fcmService.sendToUser(partner, "un:lock 💔", "커플 연결이 해제되어 모든 기록이 파기되었습니다.");
     }
 
     /**

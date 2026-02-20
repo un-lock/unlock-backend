@@ -65,7 +65,9 @@ public class AnswerService {
 
         answerRepository.save(answer);
 
-        // TODO: [Push Notification] 파트너에게 "상대방이 답변을 완료했습니다! 확인하러 가볼까요? 🔓" 알림 발송
+        // [Push Notification] 파트너에게 "상대방이 답변을 완료했습니다! 확인하러 가볼까요? 🔓" 알림 발송
+        User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
+        fcmService.sendToUser(partner, "un:lock 🔓", user.getNickname() + "님이 답변을 완료했습니다! 확인하러 가볼까요?");
     }
 
     /**
