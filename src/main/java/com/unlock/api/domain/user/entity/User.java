@@ -2,6 +2,7 @@ package com.unlock.api.domain.user.entity;
 
 import com.unlock.api.domain.common.BaseTimeEntity;
 import com.unlock.api.domain.couple.entity.Couple;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -19,8 +21,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * 사용자 정보를 담는 엔티티
+ * 사용자 기본 정보 엔티티
  */
 @Entity
 @Table(name = "users")
@@ -34,49 +39,40 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
-    private String socialId; // 소셜 로그인 고유 식별자 (소셜 로그인인 경우)
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
 
     @Column(nullable = false)
     private String nickname;
 
-    @Column(nullable = false, unique = true)
-    private String email; // 이메일 (로그인 ID 겸용)
-
-    private String password; // 이메일 로그인을 위한 비밀번호 (소셜인 경우 null 가능)
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AuthProvider provider; // 인증 제공자 (KAKAO, GOOGLE, APPLE, EMAIL)
+    private AuthProvider provider;
 
-    @Column(unique = true)
-    private String inviteCode; // 커플 연결을 위한 초대 코드
+    @Column(nullable = false, unique = true)
+    private String inviteCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "couple_id")
-    private Couple couple; // 소속된 커플 정보
+    private Couple couple;
 
-    /**
-     * 초대 코드 설정
-     */
-    public void setInviteCode(String inviteCode) {
-        this.inviteCode = inviteCode;
-    }
+    // FCM 토큰 연관 관계 (1:N 멀티 디바이스 지원)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<UserFcmToken> fcmTokens = new ArrayList<>();
 
-    /**
-     * 커플 연결 설정
-     */
-    public void setCouple(Couple couple) {
-        this.couple = couple;
-    }
-
-    /**
-     * 닉네임 변경
-     */
     public void updateNickname(String nickname) {
         this.nickname = nickname;
     }
 
-}
+    public void setInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
+    }
 
-    
+    public void setCouple(Couple couple) {
+        this.couple = couple;
+    }
+}
