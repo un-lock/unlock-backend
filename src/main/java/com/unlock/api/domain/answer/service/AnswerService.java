@@ -10,6 +10,7 @@ import com.unlock.api.domain.answer.entity.Answer;
 import com.unlock.api.domain.answer.entity.AnswerReveal;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.question.entity.CoupleQuestion;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
@@ -23,10 +24,6 @@ import java.time.LocalDate;
 
 /**
  * 답변 등록 및 열람 권한 관리 비즈니스 로직 서비스
- * 
- * 주요 정책:
- * - 상호성(Reciprocity): 내가 답변을 완료해야만 파트너의 상태를 확인할 수 있습니다.
- * - 수익화 연동: 파트너의 답변을 열람하려면 광고 시청 기록이 있거나 프리미엄 구독 상태여야 합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,6 +34,7 @@ public class AnswerService {
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     /**
      * 오늘의 답변 등록

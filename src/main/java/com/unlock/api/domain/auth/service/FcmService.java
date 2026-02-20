@@ -3,6 +3,9 @@ package com.unlock.api.domain.auth.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.unlock.api.domain.user.entity.User;
+import com.unlock.api.domain.user.entity.UserFcmToken;
+import com.unlock.api.domain.user.repository.UserFcmTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -18,6 +21,25 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FcmService {
+
+    private final UserFcmTokenRepository fcmTokenRepository;
+
+    /**
+     * 특정 유저의 모든 등록된 기기에 푸시 알림을 발송합니다.
+     */
+    @Async
+    public void sendToUser(User user, String title, String body) {
+        List<String> tokens = fcmTokenRepository.findAllByUser(user).stream()
+                .map(UserFcmToken::getToken)
+                .collect(Collectors.toList());
+
+        if (tokens.isEmpty()) {
+            log.info("유저(ID:{})에게 발송할 FCM 토큰이 없습니다.", user.getId());
+            return;
+        }
+
+        sendMessages(tokens, title, body);
+    }
 
     /**
      * 단일 기기에 푸시 알림을 발송합니다. (비동기)

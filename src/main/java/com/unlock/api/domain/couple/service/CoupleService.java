@@ -4,6 +4,7 @@ import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
@@ -35,6 +36,7 @@ public class CoupleService {
     private final AnswerRepository answerRepository;
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
+    private final FcmService fcmService;
 
     /**
      * 내 커플 정보 및 초대 코드 조회
@@ -105,7 +107,8 @@ public class CoupleService {
         // Redis에 신청 정보 저장 (키: "CP_REQ:상대ID", 값: "내ID")
         redisService.saveCoupleRequest(target.getId(), userId);
         
-        // TODO: [Push Notification] target 유저에게 "A님으로부터 커플 연결 신청이 왔습니다! 💌" 알림 발송
+        // [Push Notification] 상대방에게 연결 신청 알림 발송
+        fcmService.sendToUser(target, "un:lock 💌", requester.getNickname() + "님으로부터 커플 연결 신청이 왔습니다!");
     }
 
     /**
@@ -137,7 +140,8 @@ public class CoupleService {
         // 3. 처리 완료된 Redis 신청 정보 삭제
         redisService.deleteCoupleRequest(userId);
 
-        // TODO: [Push Notification] requester 유저에게 "신청을 수락하여 커플 연결이 완료되었습니다! 💕" 알림 발송
+        // [Push Notification] 신청자에게 연결 완료 알림 발송
+        fcmService.sendToUser(requester, "un:lock 💕", user.getNickname() + "님이 신청을 수락하여 커플 연결이 완료되었습니다!");
     }
 
     /**
@@ -205,10 +209,14 @@ public class CoupleService {
             throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
         }
         
-        // 신청 정보만 삭제
+        Long requesterId = Long.parseLong(requesterIdStr);
+        User user = userRepository.findById(userId).get();
+        User requester = userRepository.findById(requesterId).get();
+
         redisService.deleteCoupleRequest(userId);
 
-        // TODO: [Push Notification] requester 유저에게 "커플 연결 신청이 거절되었습니다. 😢" 알림 발송
+        // [Push Notification] 신청자에게 거절 알림 발송
+        fcmService.sendToUser(requester, "un:lock 😢", user.getNickname() + "님이 커플 연결 신청을 거절하였습니다.");
     }
 
     /**
