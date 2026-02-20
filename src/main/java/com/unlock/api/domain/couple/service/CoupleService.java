@@ -22,12 +22,6 @@ import java.util.UUID;
 
 /**
  * 커플 매칭 및 관계 관리 비즈니스 로직 서비스
- * 
- * 주요 기능:
- * - 초대 코드 생성 및 조회
- * - 커플 연결 신청 (Redis 기반 대기열)
- * - 신청 수락/거절 및 커플 생성
- * - 커플 해제 및 관련 데이터 전수 파기 (Privacy First)
  */
 @Slf4j
 @Service
@@ -44,10 +38,6 @@ public class CoupleService {
 
     /**
      * 내 커플 정보 및 초대 코드 조회
-     * 유저에게 초대 코드가 없는 경우 최초 1회 생성하여 저장합니다.
-     * 
-     * @param userId 현재 로그인한 유저 ID
-     * @return 초대 코드, 연결 여부, 파트너 닉네임 등을 포함한 응답 객체
      */
     @Transactional(readOnly = true)
     public CoupleResponse getCoupleInfo(Long userId) {
@@ -56,7 +46,7 @@ public class CoupleService {
 
         // 초대 코드가 없는 신규 유저에게 코드 부여
         if (user.getInviteCode() == null) {
-            user.setInviteCode(generateInviteCode());
+            user.updateInviteCode(generateInviteCode());
         }
 
         boolean isConnected = user.getCouple() != null;
@@ -65,7 +55,6 @@ public class CoupleService {
 
         if (isConnected) {
             Couple couple = user.getCouple();
-            // 두 유저 중 내가 아닌 다른 한 명(파트너)을 식별
             User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
             partnerNickname = partner.getNickname();
             startDate = couple.getStartDate();
@@ -178,10 +167,10 @@ public class CoupleService {
 
         // 2. 유저 관계 초기화 및 신규 초대 코드 부여 (새 인연을 위해)
         user.setCouple(null);
-        user.setInviteCode(generateInviteCode());
+        user.updateInviteCode(generateInviteCode());
         
         partner.setCouple(null);
-        partner.setInviteCode(generateInviteCode());
+        partner.updateInviteCode(generateInviteCode());
 
         // 3. 커플 엔티티 삭제
         coupleRepository.delete(couple);

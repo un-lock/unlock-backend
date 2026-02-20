@@ -71,6 +71,13 @@ public class User extends BaseTimeEntity {
         this.nickname = nickname;
     }
 
+    /**
+     * 초대 코드를 새로운 값으로 갱신합니다. (커플 해제 시 사용)
+     */
+    public void updateInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
+    }
+
     public void setCouple(Couple couple) {
         this.couple = couple;
     }
