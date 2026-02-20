@@ -36,6 +36,7 @@ services:
       - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
+      - ./firebase-key.json:/app/firebase-key.json:ro
     depends_on:
       db:
         condition: service_healthy

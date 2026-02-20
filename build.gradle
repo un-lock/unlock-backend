@@ -34,6 +34,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.apache.commons:commons-pool2'
 
+    // Firebase Admin SDK (FCM 용)
+    implementation 'com.google.firebase:firebase-admin:9.4.1'
+
     // QueryDSL (jakarta 버전)
     implementation "com.querydsl:querydsl-jpa:5.0.0:jakarta"
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"

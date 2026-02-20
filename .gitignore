@@ -27,6 +27,7 @@ out/
 .env
 .env.*
 *.env
+firebase-key.json
 
 # Local logs
 logs/
