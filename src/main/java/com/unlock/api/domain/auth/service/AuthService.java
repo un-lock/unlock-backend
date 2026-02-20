@@ -9,6 +9,8 @@ import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
 import com.unlock.api.domain.auth.dto.SocialProfile;
 import com.unlock.api.domain.user.entity.AuthProvider;
 import com.unlock.api.domain.user.entity.User;
+import com.unlock.api.domain.user.entity.UserFcmToken;
+import com.unlock.api.domain.user.repository.UserFcmTokenRepository;
 import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,11 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * 인증(회원가입, 로그인, 토큰 관리) 관련 비즈니스 로직 담당 서비스
+ * 인증(회원가입, 로그인, 토큰 관리) 및 FCM 토큰 연동 서비스
  */
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserFcmTokenRepository fcmTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RedisService redisService;
@@ -60,6 +64,7 @@ public class AuthService {
      * 이메일 로그인
      * - 이메일 존재 여부 및 비밀번호 일치 확인
      * - Access/Refresh Token 세트 발급
+     * - FCM 토큰 자동 연동 (추가)
      */
     public LoginDto login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -69,14 +74,20 @@ public class AuthService {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
+        // FCM 토큰 처리
+        if (request.getFcmToken() != null) {
+            handleFcmToken(user, request.getFcmToken());
+        }
+
         return createTokenResponse(user);
     }
 
     /**
      * 소셜 로그인 (Kakao, Google, Apple)
      * - 소셜 프로필 정보 조회 후 자동 가입 또는 로그인 처리
+     * - FCM 토큰 자동 연동 (추가)
      */
-    public LoginDto socialLogin(AuthProvider provider, String token) {
+    public LoginDto socialLogin(AuthProvider provider, String token, String fcmToken) {
         SocialAuthService socialAuthService = socialAuthServices.stream()
                 .filter(service -> service.getProvider() == provider)
                 .findFirst()
@@ -92,6 +103,11 @@ public class AuthService {
                         .provider(profile.getProvider())
                         .inviteCode(generateInviteCode())
                         .build()));
+
+        // FCM 토큰 처리
+        if (fcmToken != null) {
+            handleFcmToken(user, fcmToken);
+        }
 
         return createTokenResponse(user);
     }
@@ -122,9 +138,34 @@ public class AuthService {
     /**
      * 로그아웃
      * - 서버(Redis)에서 Refresh Token 폐기
+     * - 특정 기기의 FCM 토큰 해제 (추가)
      */
-    public void logout(Long userId) {
+    public void logout(Long userId, String fcmToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 1. Refresh Token 폐기
         redisService.deleteRefreshToken(userId);
+
+        // 2. 특정 기기의 FCM 토큰만 제거
+        if (fcmToken != null) {
+            fcmTokenRepository.deleteByUserAndToken(user, fcmToken);
+        }
+    }
+
+    /**
+     * FCM 토큰 저장 및 갱신 로직 (UPSERT)
+     */
+    private void handleFcmToken(User user, String fcmToken) {
+        fcmTokenRepository.findByToken(fcmToken)
+                .ifPresentOrElse(
+                        UserFcmToken::updateLastUsed,
+                        () -> fcmTokenRepository.save(UserFcmToken.builder()
+                                .user(user)
+                                .token(fcmToken)
+                                .lastUsedAt(LocalDateTime.now())
+                                .build())
+                );
     }
 
     /**

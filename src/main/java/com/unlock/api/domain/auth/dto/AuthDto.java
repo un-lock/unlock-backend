@@ -74,6 +74,18 @@ public class AuthDto {
         @NotBlank(message = "비밀번호는 필수 입력 항목입니다.")
         @Schema(description = "비밀번호", example = "password123!")
         private String password;
+
+        @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
+        private String fcmToken;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "로그아웃 요청 객체")
+    public static class LogoutRequest {
+        @Schema(description = "로그아웃할 기기의 FCM 토큰 (해당 기기 알림 중단)", example = "fcm_token_sample_xyz")
+        private String fcmToken;
     }
 
     @Getter
@@ -94,6 +106,9 @@ public class AuthDto {
         @NotBlank(message = "토큰은 필수입니다.")
         @Schema(description = "소셜 플랫폼(Kakao 등)에서 발급받은 AccessToken")
         private String token;
+
+        @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
+        private String fcmToken;
     }
 
     @Getter

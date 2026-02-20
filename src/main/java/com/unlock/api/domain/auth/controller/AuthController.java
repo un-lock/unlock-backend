@@ -4,7 +4,7 @@ import com.unlock.api.common.dto.ApiResponse;
 import com.unlock.api.common.security.annotation.CurrentUser;
 import com.unlock.api.domain.auth.dto.AuthDto.EmailRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.LoginRequest;
-import com.unlock.api.domain.auth.dto.AuthDto.ReissueRequest;
+import com.unlock.api.domain.auth.dto.AuthDto.LogoutRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SignupRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SocialLoginRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
@@ -89,11 +89,14 @@ public class AuthController {
         return ApiResponse.success("토큰 재발급 성공", loginDto.toTokenResponse());
     }
 
-    @Operation(summary = "로그아웃", description = "로그아웃 처리를 수행합니다.")
+    @Operation(summary = "로그아웃", description = "로그아웃 처리를 수행합니다. FCM 토큰을 함께 보내면 해당 기기의 알림이 해제됩니다.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공")
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@Parameter(hidden = true) @CurrentUser Long userId, HttpServletResponse response) {
-        authService.logout(userId);
+    public ApiResponse<Void> logout(
+            @Parameter(hidden = true) @CurrentUser Long userId,
+            @RequestBody(required = false) LogoutRequest request,
+            HttpServletResponse response) {
+        authService.logout(userId, request != null ? request.getFcmToken() : null);
         deleteRefreshTokenCookie(response);
         return ApiResponse.success("로그아웃 성공", null);
     }
@@ -103,7 +106,7 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/kakao")
     public ApiResponse<TokenResponse> kakaoLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
-        LoginDto loginDto = authService.socialLogin(AuthProvider.KAKAO, request.getToken());
+        LoginDto loginDto = authService.socialLogin(AuthProvider.KAKAO, request.getToken(), request.getFcmToken());
         setRefreshTokenCookie(response, loginDto.getRefreshToken());
         return ApiResponse.success("카카오 로그인 성공", loginDto.toTokenResponse());
     }
