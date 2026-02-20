@@ -52,6 +52,9 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private AuthProvider provider;
 
+    @Column(unique = true)
+    private String socialId; // 소셜 로그인 고유 식별자 (카카오 등)
+
     @Column(nullable = false, unique = true)
     private String inviteCode;
 
@@ -68,11 +71,11 @@ public class User extends BaseTimeEntity {
         this.nickname = nickname;
     }
 
-    public void setInviteCode(String inviteCode) {
-        this.inviteCode = inviteCode;
-    }
-
     public void setCouple(Couple couple) {
         this.couple = couple;
+    }
+
+    public void clearCouple() {
+        this.couple = null;
     }
 }
