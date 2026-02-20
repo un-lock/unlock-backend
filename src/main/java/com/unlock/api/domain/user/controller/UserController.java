@@ -3,6 +3,7 @@ package com.unlock.api.domain.user.controller;
 import com.unlock.api.common.dto.ApiResponse;
 import com.unlock.api.common.security.annotation.CurrentUser;
 import com.unlock.api.domain.user.dto.UserDto.NicknameUpdateRequest;
+import com.unlock.api.domain.user.dto.UserDto.PasswordUpdateRequest;
 import com.unlock.api.domain.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +37,16 @@ public class UserController {
             @Parameter(hidden = true) @CurrentUser Long userId,
             @RequestBody @Valid NicknameUpdateRequest request) {
         return ApiResponse.success("닉네임이 변경되었습니다.", userService.updateNickname(userId, request));
+    }
+
+    @Operation(summary = "비밀번호 변경", description = "로그인된 상태에서 현재 비밀번호를 확인한 후 새로운 비밀번호로 변경합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "변경 성공")
+    @PatchMapping("/me/password")
+    public ApiResponse<Void> updatePassword(
+            @Parameter(hidden = true) @CurrentUser Long userId,
+            @RequestBody @Valid PasswordUpdateRequest request) {
+        userService.updatePassword(userId, request);
+        return ApiResponse.success("비밀번호가 성공적으로 변경되었습니다.", null);
     }
 
     @Operation(summary = "회원 탈퇴 (데이터 즉시 파기)", description = "서비스 이용을 중단하고 모든 개인정보 및 대화 기록을 즉시 영구 파기합니다. ⚠️주의: 복구 불가")

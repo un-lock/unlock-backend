@@ -7,11 +7,13 @@ import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
 import com.unlock.api.domain.auth.service.AuthService;
 import com.unlock.api.domain.couple.service.CoupleService;
 import com.unlock.api.domain.user.dto.UserDto.NicknameUpdateRequest;
+import com.unlock.api.domain.user.dto.UserDto.PasswordUpdateRequest;
 import com.unlock.api.domain.user.entity.User;
 import com.unlock.api.domain.user.repository.UserFcmTokenRepository;
 import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class UserService {
     private final AnswerRepository answerRepository;
     private final AnswerRevealRepository answerRevealRepository;
     private final UserFcmTokenRepository fcmTokenRepository;
+    private final PasswordEncoder passwordEncoder; // 추가
 
     /**
      * 닉네임 변경
@@ -41,6 +44,23 @@ public class UserService {
         user.updateNickname(request.getNickname());
         log.info("유저(ID:{}) 닉네임 변경 완료: {}", userId, request.getNickname());
         return user.getNickname();
+    }
+
+    /**
+     * 비밀번호 직접 변경 (로그인 상태)
+     */
+    public void updatePassword(Long userId, PasswordUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 1. 현재 비밀번호 일치 여부 확인
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException("현재 비밀번호가 일치하지 않습니다.", ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 2. 새로운 비밀번호 암호화 및 저장
+        user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+        log.info("유저(ID:{}) 비밀번호 변경 완료", userId);
     }
 
     /**
