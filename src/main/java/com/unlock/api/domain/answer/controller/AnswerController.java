@@ -1,6 +1,6 @@
 package com.unlock.api.domain.answer.controller;
 
-import com.unlock.api.common.dto.ApiResponse;
+import com.unlock.api.common.dto.ApiCommonResponse;
 import com.unlock.api.common.security.annotation.CurrentUser;
 import com.unlock.api.domain.answer.dto.AnswerDto.AnswerRequest;
 import com.unlock.api.domain.answer.dto.AnswerDto.TodayAnswerResponse;
@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,30 +32,30 @@ public class AnswerController {
     private final AnswerService answerService;
 
     @Operation(summary = "오늘의 답변 등록")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "등록 성공")
+    @ApiResponse(responseCode = "200", description = "등록 성공")
     @PostMapping
-    public ApiResponse<Void> submitAnswer(
+    public ApiCommonResponse<Void> submitAnswer(
             @Parameter(hidden = true) @CurrentUser Long userId,
             @RequestBody @Valid AnswerRequest request) {
         answerService.submitAnswer(userId, request);
-        return ApiResponse.success("답변이 등록되었습니다.", null);
+        return ApiCommonResponse.success("답변이 등록되었습니다.", null);
     }
 
     @Operation(summary = "오늘의 답변 현황 조회")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공",
+    @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = TodayAnswerResponse.class)))
     @GetMapping("/today")
-    public ApiResponse<TodayAnswerResponse> getTodayAnswers(@Parameter(hidden = true) @CurrentUser Long userId) {
-        return ApiResponse.success("오늘의 답변 조회 성공", answerService.getTodayAnswers(userId));
+    public ApiCommonResponse<TodayAnswerResponse> getTodayAnswers(@Parameter(hidden = true) @CurrentUser Long userId) {
+        return ApiCommonResponse.success("오늘의 답변 조회 성공", answerService.getTodayAnswers(userId));
     }
 
     @Operation(summary = "파트너 답변 잠금 해제 (Reveal)")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "공개 성공")
+    @ApiResponse(responseCode = "200", description = "공개 성공")
     @PostMapping("/{answerId}/reveal")
-    public ApiResponse<Void> revealPartnerAnswer(
+    public ApiCommonResponse<Void> revealPartnerAnswer(
             @Parameter(hidden = true) @CurrentUser Long userId,
             @PathVariable Long answerId) {
         answerService.revealPartnerAnswer(userId, answerId);
-        return ApiResponse.success("상대방의 답변이 공개되었습니다.", null);
+        return ApiCommonResponse.success("상대방의 답변이 공개되었습니다.", null);
     }
 }
