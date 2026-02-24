@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 /**
@@ -54,12 +55,14 @@ public class CoupleService {
         boolean isConnected = user.getCouple() != null;
         String partnerNickname = null;
         LocalDate startDate = null;
+        LocalTime notificationTime = null;
 
         if (isConnected) {
             Couple couple = user.getCouple();
             User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
             partnerNickname = partner.getNickname();
             startDate = couple.getStartDate();
+            notificationTime = couple.getNotificationTime();
         }
 
         return CoupleResponse.builder()
@@ -67,7 +70,24 @@ public class CoupleService {
                 .isConnected(isConnected)
                 .partnerNickname(partnerNickname)
                 .startDate(startDate)
+                .notificationTime(notificationTime)
                 .build();
+    }
+
+    /**
+     * 커플 알림 시간 변경
+     */
+    public void updateNotificationTime(Long userId, LocalTime notificationTime) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateNotificationTime(notificationTime);
+        log.info("[UPDATE] 커플(ID:{}) 알림 시간 변경 -> {}", couple.getId(), notificationTime);
     }
 
     /**

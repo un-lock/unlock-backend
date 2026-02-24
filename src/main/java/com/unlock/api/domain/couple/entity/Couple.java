@@ -53,4 +53,8 @@ public class Couple extends BaseTimeEntity {
     @Builder.Default
     @Column(nullable = false)
     private boolean isSubscribed = false; // 프리미엄 구독 여부 (true인 경우 광고 없이 답변 열람 가능)
+
+    public void updateNotificationTime(LocalTime newTime) {
+        this.notificationTime = newTime;
+    }
 }

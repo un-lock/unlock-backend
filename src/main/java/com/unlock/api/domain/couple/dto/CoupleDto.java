@@ -2,12 +2,14 @@ package com.unlock.api.domain.couple.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * 커플 관련 데이터 전송 객체
@@ -25,6 +27,16 @@ public class CoupleDto {
     }
 
     @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "알림 시간 변경 요청")
+    public static class NotificationTimeRequest {
+        @NotNull(message = "알림 시간은 필수입니다.")
+        @Schema(description = "변경할 알림 시간 (HH:mm)", example = "22:00")
+        private LocalTime notificationTime;
+    }
+
+    @Getter
     @Builder
     @Schema(description = "내 커플 정보 응답")
     public static class CoupleResponse {
@@ -39,6 +51,9 @@ public class CoupleDto {
 
         @Schema(description = "커플 시작일 (연결 안된 경우 null)", example = "2026-02-06")
         private LocalDate startDate;
+
+        @Schema(description = "현재 설정된 알림 시간", example = "21:00")
+        private LocalTime notificationTime;
     }
 
     @Getter
