@@ -35,7 +35,9 @@ public class QuestionService {
 
     /**
      * 오늘의 질문 조회 (유저용 API)
+     * [리팩토링]: 배정 로직을 직접 수행하지 않고, 이미 배정된 질문이 있는지 조회만 수행합니다.
      */
+    @Transactional(readOnly = true)
     public QuestionResponse getTodayQuestion(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -43,23 +45,31 @@ public class QuestionService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        Question question = assignQuestionToCouple(couple);
+        // 1. 오늘 날짜로 배정된 질문이 있는지 확인
+        LocalDate today = LocalDate.now();
+        CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, today)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)); // 아직 질문이 배정되지 않은 경우
+
+        Question question = coupleQuestion.getQuestion();
         boolean isAnswered = answerRepository.existsByUserAndQuestion(user, question);
 
         return convertToResponse(question, isAnswered);
     }
 
     /**
-     * 커플에게 질문 배정 (스케줄러 및 API 공용)
+     * 커플에게 질문 배정 (오직 스케줄러 전용)
+     * [리팩토링]: 기존 질문 이월(Carry-over) 및 신규 배정 로직을 한곳에서 관리합니다.
      */
     public Question assignQuestionToCouple(Couple couple) {
         LocalDate today = LocalDate.now();
 
+        // 1. 이미 오늘 배정된 질문이 있다면 중복 배정 방지
         Optional<CoupleQuestion> todayRecord = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, today);
         if (todayRecord.isPresent()) {
             return todayRecord.get().getQuestion();
         }
 
+        // 2. [질문 이월 로직]: 마지막 질문이 미완료 상태라면 날짜만 오늘로 갱신
         Optional<CoupleQuestion> lastRecord = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple);
         
         if (lastRecord.isPresent()) {
@@ -68,12 +78,13 @@ public class QuestionService {
             boolean user2Finished = answerRepository.existsByUserAndQuestion(couple.getUser2(), last.getQuestion());
 
             if (!(user1Finished && user2Finished)) {
-                log.info("[MOVE] 커플(ID:{}) 미완료 질문 발견 -> 날짜를 {}로 이동", couple.getId(), today);
+                log.info("[MOVE/CARRY-OVER] 커플(ID:{}) 미완료 질문 발견 -> 날짜를 {}로 이동", couple.getId(), today);
                 last.updateAssignedDate(today);
                 return last.getQuestion();
             }
         }
 
+        // 3. [신규 배정]: 이월된 질문이 없다면 새로운 질문 랜덤 추출
         Question randomQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
@@ -89,13 +100,13 @@ public class QuestionService {
     }
 
     /**
-     * Entity -> DTO 변환 (Enum 타입 그대로 반환)
+     * Entity -> DTO 변환
      */
     private QuestionResponse convertToResponse(Question question, boolean isAnswered) {
         return QuestionResponse.builder()
                 .id(question.getId())
                 .content(question.getContent())
-                .category(question.getCategory()) // .getDescription() 제거
+                .category(question.getCategory())
                 .isAnswered(isAnswered)
                 .build();
     }
