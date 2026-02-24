@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Schema(description = "전역 공통 응답 규격")
-public class ApiResponse<T> {
+public class ApiCommonResponse<T> {
 
     @Schema(description = "요청 성공 여부", example = "true")
     private boolean success;
@@ -30,21 +30,21 @@ public class ApiResponse<T> {
     /**
      * 성공 응답 생성 (데이터 포함)
      */
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "COMMON_000", "성공", data);
+    public static <T> ApiCommonResponse<T> success(T data) {
+        return new ApiCommonResponse<>(true, "COMMON_000", "성공", data);
     }
 
     /**
      * 성공 응답 생성 (메시지와 데이터 포함)
      */
-    public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(true, "COMMON_000", message, data);
+    public static <T> ApiCommonResponse<T> success(String message, T data) {
+        return new ApiCommonResponse<>(true, "COMMON_000", message, data);
     }
 
     /**
      * 에러 응답 생성
      */
-    public static ApiResponse<Void> error(String code, String message) {
-        return new ApiResponse<>(false, code, message, null);
+    public static ApiCommonResponse<Void> error(String code, String message) {
+        return new ApiCommonResponse<>(false, code, message, null);
     }
 }
