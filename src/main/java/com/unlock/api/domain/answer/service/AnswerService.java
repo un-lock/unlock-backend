@@ -20,8 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-
 /**
  * 답변 등록 및 열람 권한 관리 비즈니스 로직 서비스
  */
@@ -37,9 +35,8 @@ public class AnswerService {
     private final FcmService fcmService;
 
     /**
-     * 오늘의 답변 등록
-     * 1. 오늘 우리 커플에게 배정된 질문을 찾습니다.
-     * 2. 이미 답변을 남겼는지 확인 후 저장합니다.
+     * 답변 등록
+     * [고도화]: 날짜와 상관없이 가장 최근에 배정된(또는 이월된) 질문에 대해 답변을 등록합니다.
      */
     public void submitAnswer(Long userId, AnswerRequest request) {
         User user = userRepository.findById(userId)
@@ -48,8 +45,8 @@ public class AnswerService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 오늘 날짜로 배정(또는 이동)된 질문 조회
-        CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
+        // 가장 최근에 배정된 질문 조회 (날짜가 지났더라도 미완료라면 이 질문에 답해야 함)
+        CoupleQuestion coupleQuestion = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         // 중복 답변 방지
@@ -65,16 +62,14 @@ public class AnswerService {
 
         answerRepository.save(answer);
 
-        // [Push Notification] 파트너에게 "상대방이 답변을 완료했습니다! 확인하러 가볼까요? 🔓" 알림 발송
+        // [Push Notification] 파트너에게 알림 발송
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
         fcmService.sendToUser(partner, "un:lock 🔓", user.getNickname() + "님이 답변을 완료했습니다! 확인하러 가볼까요?");
     }
 
     /**
-     * 오늘의 답변 현황 조회 (나와 파트너)
-     * 파트너의 답변 내용은 열람 권한(광고/구독) 여부에 따라 마스킹 처리될 수 있습니다.
-     * 
-     * @return 나의 답변 상세와 파트너의 답변 요약(또는 상세) 정보를 담은 DTO
+     * 현재 활성화된 답변 현황 조회
+     * [고도화]: 가장 최근 배정된 질문을 기준으로 답변 상태를 조회합니다.
      */
     @Transactional(readOnly = true)
     public TodayAnswerResponse getTodayAnswers(Long userId) {
@@ -84,7 +79,8 @@ public class AnswerService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
+        // 가장 최근 질문 조회
+        CoupleQuestion coupleQuestion = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         // 1. 내 답변 조회 (미작성 시 파트너 답변 조회를 차단하기 위해 예외 발생)
