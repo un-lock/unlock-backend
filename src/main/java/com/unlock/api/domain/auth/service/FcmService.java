@@ -42,7 +42,7 @@ public class FcmService {
     }
 
     /**
-     * 단일 기기에 푸시 알림을 발송합니다. (비동기)
+     * 단일 기기에 푸시 알림을 발송합니다. (HTTP v1 API 사용)
      */
     @Async
     public void sendMessage(String targetToken, String title, String body) {
@@ -56,9 +56,9 @@ public class FcmService {
                     .build();
 
             String response = FirebaseMessaging.getInstance().send(message);
-            log.info("FCM 알림 발송 성공: {}", response);
+            log.info("FCM 단일 알림 발송 성공: {}", response);
         } catch (Exception e) {
-            log.error("FCM 알림 발송 실패 (Token: {}): {}", targetToken, e.getMessage());
+            log.error("FCM 단일 알림 발송 실패 (Token: {}): {}", targetToken, e.getMessage());
         }
     }
 
@@ -80,7 +80,7 @@ public class FcmService {
                 .collect(Collectors.toList());
 
         try {
-            FirebaseMessaging.getInstance().sendAll(messages);
+            FirebaseMessaging.getInstance().sendEach(messages);
             log.info("{}개의 기기에 FCM 알림 발송 완료", targetTokens.size());
         } catch (Exception e) {
             log.error("FCM 다중 알림 발송 중 에러 발생: {}", e.getMessage());
