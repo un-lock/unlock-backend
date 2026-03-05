@@ -35,7 +35,7 @@ public class ArchiveService {
 
     /**
      * 월별 아카이브 요약 목록 조회 (캘린더용)
-     * [최고 성능 최적화]: Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
+     * Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
      */
     public List<ArchiveSummaryResponse> getMonthlyArchive(Long userId, int year, int month) {
         User user = userRepository.findById(userId)
