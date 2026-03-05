@@ -18,7 +18,6 @@ import java.util.Collections;
 
 /**
  * JWT 인증 필터
- * 모든 요청에서 Header의 Authorization 토큰을 확인하여 인증을 수행합니다.
  */
 @Component
 @RequiredArgsConstructor
@@ -29,6 +28,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        // [추가] Swagger 경로는 JWT 검사를 하지 않고 바로 다음 필터로 넘깁니다.
+        String path = request.getServletPath();
+        if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/swagger-resources")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = resolveToken(request);
 
