@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 
                 // Swagger 경로에 대해서만 Basic Auth(비밀번호 팝업) 활성화
-                .httpBasic(Customizer.withDefaults())
+                .httpBasic(httpBasic -> httpBasic.realmName("Unlock Swagger"))
                 
                 // 세션 정책: Swagger 로그인을 위해 필요할 때만 생성(IF_REQUIRED)
                 .sessionManagement(session -> session
