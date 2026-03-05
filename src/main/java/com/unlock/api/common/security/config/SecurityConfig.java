@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -27,7 +26,6 @@ import java.util.Arrays;
 
 /**
  * Spring Security 설정 클래스
- * - Swagger 접속 보안(Basic Auth)과 API 보안(JWT)을 분리하여 관리합니다.
  */
 @Configuration
 @EnableWebSecurity
@@ -35,7 +33,6 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
     @Value("${swagger.user}")
     private String swaggerUser;
 
@@ -47,36 +44,24 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * [Security 1순위] Swagger UI 보호를 위한 필터 체인
-     * - Basic Auth를 통해 로그인을 요구합니다.
-     */
     @Bean
-    @Order(1)
-    public SecurityFilterChain swaggerFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/swagger-ui/**", "/v3/api-docs/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults()); // 브라우저 팝업창 활성화
-        return http.build();
-    }
-
-    /**
-     * [Security 2순위] 메인 API 보안 필터 체인
-     * - JWT 기반 무상태(Stateless) 인증을 수행합니다.
-     */
-    @Bean
-    @Order(2)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                
+                // Swagger 경로에 대해서만 Basic Auth(비밀번호 팝업) 활성화
+                .httpBasic(Customizer.withDefaults())
+                
+                // 세션 정책: Swagger 로그인을 위해 필요할 때만 생성(IF_REQUIRED)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
+                
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/api/v1/auth/**").permitAll()
+                        // Swagger 경로는 인증(아이디/비번)된 사용자만 허용
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -85,16 +70,16 @@ public class SecurityConfig {
     }
 
     /**
-     * Swagger 접속용 인메모리 유저 설정
+     * [추가] Swagger 접속에 사용할 아이디/비밀번호 설정
      */
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails user = User.builder()
+        UserDetails admin = User.builder()
                 .username(swaggerUser)
                 .password(passwordEncoder().encode(swaggerPassword))
                 .roles("ADMIN")
                 .build();
-        return new InMemoryUserDetailsManager(user);
+        return new InMemoryUserDetailsManager(admin);
     }
 
     @Bean
