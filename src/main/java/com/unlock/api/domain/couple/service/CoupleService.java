@@ -4,6 +4,7 @@ import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
 import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
@@ -128,7 +129,7 @@ public class CoupleService {
         redisService.saveCoupleRequest(target.getId(), userId);
         
         // [Push Notification] 상대방에게 연결 신청 알림 발송
-        fcmService.sendToUser(target, "un:lock 💌", requester.getNickname() + "님으로부터 커플 연결 신청이 왔습니다!");
+        fcmService.sendToUser(target, "un:lock 💌", requester.getNickname() + "님으로부터 커플 연결 신청이 왔습니다!", NotificationType.COUPLE_REQUEST);
     }
 
     /**
@@ -161,7 +162,7 @@ public class CoupleService {
         redisService.deleteCoupleRequest(userId);
 
         // [Push Notification] 신청자에게 연결 완료 알림 발송
-        fcmService.sendToUser(requester, "un:lock 💕", user.getNickname() + "님이 신청을 수락하여 커플 연결이 완료되었습니다!");
+        fcmService.sendToUser(requester, "un:lock 💕", user.getNickname() + "님이 신청을 수락하여 커플 연결이 완료되었습니다!", NotificationType.COUPLE_CONNECTED);
     }
 
     /**
@@ -202,7 +203,7 @@ public class CoupleService {
         log.info("[BREAKUP] 커플(ID:{})의 모든 기록이 성공적으로 삭제되었습니다.", couple.getId());
         
         // [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
-        fcmService.sendToUser(partner, "un:lock 💔", "커플 연결이 해제되어 모든 기록이 파기되었습니다.");
+        fcmService.sendToUser(partner, "un:lock 💔", "커플 연결이 해제되어 모든 기록이 파기되었습니다.", NotificationType.COUPLE_DISCONNECTED);
     }
 
     /**
@@ -237,7 +238,7 @@ public class CoupleService {
         redisService.deleteCoupleRequest(userId);
 
         // [Push Notification] 신청자에게 거절 알림 발송
-        fcmService.sendToUser(requester, "un:lock 😢", user.getNickname() + "님이 커플 연결 신청을 거절하였습니다.");
+        fcmService.sendToUser(requester, "un:lock 😢", user.getNickname() + "님이 커플 연결 신청을 거절하였습니다.", NotificationType.COUPLE_REQUEST_REJECTED);
     }
 
     /**

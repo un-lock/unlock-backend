@@ -10,6 +10,7 @@ import com.unlock.api.domain.answer.entity.Answer;
 import com.unlock.api.domain.answer.entity.AnswerReveal;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
 import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.question.entity.CoupleQuestion;
@@ -64,7 +65,7 @@ public class AnswerService {
 
         // [Push Notification] 파트너에게 알림 발송
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
-        fcmService.sendToUser(partner, "un:lock 🔓", user.getNickname() + "님이 답변을 완료했습니다! 확인하러 가볼까요?");
+        fcmService.sendToUser(partner, "un:lock 🔓", user.getNickname() + "님이 답변을 완료했습니다! 확인하러 가볼까요?", NotificationType.PARTNER_ANSWER);
     }
 
     /**

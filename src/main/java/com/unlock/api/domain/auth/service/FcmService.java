@@ -3,6 +3,7 @@ package com.unlock.api.domain.auth.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.unlock.api.domain.auth.entity.NotificationType;
 import com.unlock.api.domain.user.entity.User;
 import com.unlock.api.domain.user.entity.UserFcmToken;
 import com.unlock.api.domain.user.repository.UserFcmTokenRepository;
@@ -25,48 +26,26 @@ public class FcmService {
     private final UserFcmTokenRepository fcmTokenRepository;
 
     /**
-     * 특정 유저의 모든 등록된 기기에 푸시 알림을 발송합니다.
+     * 특정 유저의 모든 등록된 기기에 푸시 알림을 발송합니다. (타입 포함)
      */
     @Async
-    public void sendToUser(User user, String title, String body) {
+    public void sendToUser(User user, String title, String body, NotificationType type) {
         List<String> tokens = fcmTokenRepository.findAllByUser(user).stream()
                 .map(UserFcmToken::getToken)
                 .collect(Collectors.toList());
 
         if (tokens.isEmpty()) {
-            log.info("유저(ID:{})에게 발송할 FCM 토큰이 없습니다.", user.getId());
             return;
         }
 
-        sendMessages(tokens, title, body);
+        sendMessages(tokens, title, body, type);
     }
 
     /**
-     * 단일 기기에 푸시 알림을 발송합니다. (HTTP v1 API 사용)
+     * 여러 기기에 푸시 알림을 발송합니다. (타입 정보 포함)
      */
     @Async
-    public void sendMessage(String targetToken, String title, String body) {
-        try {
-            Message message = Message.builder()
-                    .setToken(targetToken)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .build();
-
-            String response = FirebaseMessaging.getInstance().send(message);
-            log.info("FCM 단일 알림 발송 성공: {}", response);
-        } catch (Exception e) {
-            log.error("FCM 단일 알림 발송 실패 (Token: {}): {}", targetToken, e.getMessage());
-        }
-    }
-
-    /**
-     * 여러 기기에 푸시 알림을 발송합니다.
-     */
-    @Async
-    public void sendMessages(List<String> targetTokens, String title, String body) {
+    public void sendMessages(List<String> targetTokens, String title, String body, NotificationType type) {
         if (targetTokens.isEmpty()) return;
 
         List<Message> messages = targetTokens.stream()
@@ -76,14 +55,15 @@ public class FcmService {
                                 .setTitle(title)
                                 .setBody(body)
                                 .build())
+                        .putData("type", type.name()) // 알림 타입 추가
                         .build())
                 .collect(Collectors.toList());
 
         try {
             FirebaseMessaging.getInstance().sendEach(messages);
-            log.info("{}개의 기기에 FCM 알림 발송 완료", targetTokens.size());
+            log.info("[FCM] {} 건 발송 완료 (Type: {})", targetTokens.size(), type);
         } catch (Exception e) {
-            log.error("FCM 다중 알림 발송 중 에러 발생: {}", e.getMessage());
+            log.error("[FCM] 발송 에러: {}", e.getMessage());
         }
     }
 }

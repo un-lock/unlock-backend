@@ -1,6 +1,7 @@
 package com.unlock.api.domain.question.service;
 
 import com.unlock.api.domain.answer.repository.AnswerRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
 import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.entity.Couple;
@@ -70,17 +71,17 @@ public class QuestionScheduler {
 
                 // [Case 1] 오늘 처음 질문이 배정되었거나 이동해온 경우 (둘 다 안 썼을 확률 높음)
                 if (isNewQuestionDay && !user1Finished && !user2Finished) {
-                    fcmService.sendToUser(couple.getUser1(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.");
-                    fcmService.sendToUser(couple.getUser2(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.");
+                    fcmService.sendToUser(couple.getUser1(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.", NotificationType.DAILY_QUESTION);
+                    fcmService.sendToUser(couple.getUser2(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.", NotificationType.DAILY_QUESTION);
                 } 
                 else {
                     if (!user1Finished) {
                         String msg = user2Finished ? "파트너가 답변을 기다리고 있어요! 🔓" : "아직 오늘의 질문에 답변하지 않으셨어요! 🔔";
-                        fcmService.sendToUser(couple.getUser1(), "un:lock 🔔", msg);
+                        fcmService.sendToUser(couple.getUser1(), "un:lock 🔔", msg, NotificationType.DAILY_QUESTION);
                     }
                     if (!user2Finished) {
                         String msg = user1Finished ? "파트너가 답변을 기다리고 있어요! 🔓" : "아직 오늘의 질문에 답변하지 않으셨어요! 🔔";
-                        fcmService.sendToUser(couple.getUser2(), "un:lock 🔔", msg);
+                        fcmService.sendToUser(couple.getUser2(), "un:lock 🔔", msg, NotificationType.DAILY_QUESTION);
                     }
                 }
                 
