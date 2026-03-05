@@ -34,6 +34,9 @@ services:
       - JWT_REFRESH_TOKEN_VALIDITY=${JWT_REFRESH_TOKEN_VALIDITY}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
+      # Swagger 보안 인증 정보 추가
+      - SWAGGER_USER=${SWAGGER_USER}
+      - SWAGGER_PASSWORD=${SWAGGER_PASSWORD}
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
       - ./firebase-key.json:/app/firebase-key.json:ro
