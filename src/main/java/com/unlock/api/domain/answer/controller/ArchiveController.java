@@ -39,6 +39,18 @@ public class ArchiveController {
         return ApiCommonResponse.success("월별 아카이브 조회 성공", archiveService.getMonthlyArchive(userId, year, month));
     }
 
+    @Operation(summary = "아카이브 리스트 조회 (최신순/오래된순, 페이징)")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = ArchiveSummaryResponse.class))))
+    @GetMapping("/list")
+    public ApiCommonResponse<List<ArchiveSummaryResponse>> getArchiveList(
+            @Parameter(hidden = true) @CurrentUser Long userId,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지당 개수", example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "정렬 기준 (DESC: 최신순, ASC: 오래된순)", example = "DESC") @RequestParam(defaultValue = "DESC") String sort) {
+        return ApiCommonResponse.success("아카이브 리스트 조회 성공", archiveService.getArchiveList(userId, page, size, sort));
+    }
+
     @Operation(summary = "아카이브 상세 조회")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = ArchiveDetailResponse.class)))

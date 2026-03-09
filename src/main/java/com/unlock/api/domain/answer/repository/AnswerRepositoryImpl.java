@@ -52,4 +52,35 @@ public class AnswerRepositoryImpl implements AnswerRepositoryCustom {
                 .orderBy(coupleQuestion.assignedDate.asc())
                 .fetch();
     }
+
+    @Override
+    public List<ArchiveSummaryResponse> findArchiveList(Couple couple, Long userId, Long partnerId, int page, int size, String sortDirection) {
+        QCoupleQuestion coupleQuestion = QCoupleQuestion.coupleQuestion;
+        QAnswer myAnswer = new QAnswer("myAnswer");
+        QAnswer partnerAnswer = new QAnswer("partnerAnswer");
+
+        return queryFactory
+                .select(Projections.constructor(ArchiveSummaryResponse.class,
+                        coupleQuestion.question.id,
+                        coupleQuestion.question.content,
+                        coupleQuestion.assignedDate,
+                        myAnswer.id.isNotNull(),
+                        partnerAnswer.id.isNotNull()
+                ))
+                .from(coupleQuestion)
+                .leftJoin(myAnswer).on(
+                        myAnswer.question.eq(coupleQuestion.question)
+                                .and(myAnswer.user.id.eq(userId))
+                )
+                .leftJoin(partnerAnswer).on(
+                        partnerAnswer.question.eq(coupleQuestion.question)
+                                .and(partnerAnswer.user.id.eq(partnerId))
+                )
+                .where(coupleQuestion.couple.eq(couple))
+                .orderBy(sortDirection.equalsIgnoreCase("DESC") ? 
+                        coupleQuestion.assignedDate.desc() : coupleQuestion.assignedDate.asc())
+                .offset((long) page * size)
+                .limit(size)
+                .fetch();
+    }
 }

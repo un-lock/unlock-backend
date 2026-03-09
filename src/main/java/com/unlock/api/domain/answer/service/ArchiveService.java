@@ -51,6 +51,22 @@ public class ArchiveService {
     }
 
     /**
+     * 아카이브 리스트형 조회 (페이징 및 정렬 적용)
+     */
+    public List<ArchiveSummaryResponse> getArchiveList(Long userId, int page, int size, String sort) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+
+        User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
+
+        // Querydsl을 통해 페이징 및 정렬이 적용된 리스트를 가져옵니다.
+        return answerRepository.findArchiveList(couple, userId, partner.getId(), page, size, sort);
+    }
+
+    /**
      * 아카이브 상세 조회
      */
     public ArchiveDetailResponse getArchiveDetail(Long userId, Long questionId) {
