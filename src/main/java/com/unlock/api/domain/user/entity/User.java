@@ -92,4 +92,12 @@ public class User extends BaseTimeEntity {
     public void clearCouple() {
         this.couple = null;
     }
+
+    /**
+     * 기존 계정에 소셜 로그인 정보를 연결(통합)합니다.
+     */
+    public void updateSocialInfo(String socialId, AuthProvider provider) {
+        this.socialId = socialId;
+        this.provider = provider;
+    }
 }
