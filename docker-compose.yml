@@ -25,7 +25,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
@@ -37,6 +37,9 @@ services:
       # Swagger 보안 인증 정보 추가
       - SWAGGER_USER=${SWAGGER_USER}
       - SWAGGER_PASSWORD=${SWAGGER_PASSWORD}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
       - ./firebase-key.json:/app/firebase-key.json:ro
