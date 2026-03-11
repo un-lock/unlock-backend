@@ -114,22 +114,38 @@ public class AuthService {
     /**
      * 소셜 로그인 및 FCM 토큰 등록
      */
-    public LoginDto socialLogin(AuthProvider provider, String token, String fcmToken) {
+    public LoginDto socialLogin(AuthProvider provider, String code, String fcmToken) {
         SocialAuthService socialAuthService = socialAuthServices.stream()
                 .filter(service -> service.getProvider() == provider)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 소셜 로그인입니다."));
 
-        SocialProfile profile = socialAuthService.getProfile(token);
+        SocialProfile profile = socialAuthService.getProfileByCode(code);
 
+        // 1. 소셜 ID로 사용자 조회 (이미 연동된 경우)
         User user = userRepository.findBySocialIdAndProvider(profile.getSocialId(), profile.getProvider())
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .socialId(profile.getSocialId())
-                        .email(profile.getEmail())
-                        .nickname(profile.getNickname())
-                        .provider(profile.getProvider())
-                        .inviteCode(generateInviteCode())
-                        .build()));
+                .orElse(null);
+
+        // 2. 소셜 연동 사용자가 없다면, 이메일로 기존 계정 찾기 (통합 시도)
+        if (user == null) {
+            user = userRepository.findByEmail(profile.getEmail())
+                    .map(existingUser -> {
+                        // 기존 계정에 소셜 정보를 연결 (통합)
+                        existingUser.updateSocialInfo(profile.getSocialId(), profile.getProvider());
+                        return userRepository.save(existingUser);
+                    })
+                    .orElseGet(() -> {
+                        // 아예 신규 가입 (소셜 가입은 랜덤 패스워드 설정)
+                        return userRepository.save(User.builder()
+                                .socialId(profile.getSocialId())
+                                .email(profile.getEmail())
+                                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                                .nickname(profile.getNickname())
+                                .provider(profile.getProvider())
+                                .inviteCode(generateInviteCode())
+                                .build());
+                    });
+        }
 
         if (fcmToken != null) {
             handleFcmToken(user, fcmToken);

@@ -126,9 +126,9 @@ public class AuthDto {
     @AllArgsConstructor
     @Schema(description = "소셜 로그인 요청 객체")
     public static class SocialLoginRequest {
-        @NotBlank(message = "토큰은 필수입니다.")
-        @Schema(description = "소셜 플랫폼(Kakao 등)에서 발급받은 AccessToken")
-        private String token;
+        @NotBlank(message = "인가 코드는 필수입니다.")
+        @Schema(description = "소셜 플랫폼(Kakao 등)에서 발급받은 인가 코드(Code)")
+        private String code;
 
         @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
         private String fcmToken;

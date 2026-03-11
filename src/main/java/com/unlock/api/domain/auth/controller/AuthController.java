@@ -125,7 +125,7 @@ public class AuthController {
             content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/kakao")
     public ApiCommonResponse<TokenResponse> kakaoLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
-        LoginDto loginDto = authService.socialLogin(AuthProvider.KAKAO, request.getToken(), request.getFcmToken());
+        LoginDto loginDto = authService.socialLogin(AuthProvider.KAKAO, request.getCode(), request.getFcmToken());
         setRefreshTokenCookie(response, loginDto.getRefreshToken());
         return ApiCommonResponse.success("카카오 로그인 성공", loginDto.toTokenResponse());
     }
