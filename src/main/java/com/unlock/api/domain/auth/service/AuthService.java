@@ -206,7 +206,11 @@ public class AuthService {
     private void handleFcmToken(User user, String fcmToken) {
         fcmTokenRepository.findByToken(fcmToken)
                 .ifPresentOrElse(
-                        UserFcmToken::updateLastUsed,
+                        existingToken -> {
+                            // 이미 존재하는 토큰이면 현재 유저로 업데이트하고 마지막 사용 시간 갱신
+                            existingToken.updateUser(user);
+                            existingToken.updateLastUsed();
+                        },
                         () -> fcmTokenRepository.save(UserFcmToken.builder()
                                 .user(user)
                                 .token(fcmToken)
