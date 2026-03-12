@@ -8,6 +8,7 @@ import com.unlock.api.domain.auth.service.AuthService;
 import com.unlock.api.domain.couple.service.CoupleService;
 import com.unlock.api.domain.user.dto.UserDto.NicknameUpdateRequest;
 import com.unlock.api.domain.user.dto.UserDto.PasswordUpdateRequest;
+import com.unlock.api.domain.user.entity.AuthProvider;
 import com.unlock.api.domain.user.entity.User;
 import com.unlock.api.domain.user.repository.UserFcmTokenRepository;
 import com.unlock.api.domain.user.repository.UserRepository;
@@ -77,7 +78,12 @@ public class UserService {
             coupleService.breakup(userId);
         }
 
-        // 2. 유저 개인 데이터 연쇄 파기 (커플이 아니었더라도 남아있을 수 있는 데이터 정리)
+        // 2. 소셜 연동 해제 (카카오 등 소셜 로그인인 경우)
+        if (user.getProvider() != AuthProvider.EMAIL) {
+            authService.unlinkSocial(user.getProvider(), user.getSocialId());
+        }
+
+        // 3. 유저 개인 데이터 연쇄 파기 (커플이 아니었더라도 남아있을 수 있는 데이터 정리)
         answerRevealRepository.deleteAllByUser(user);
         answerRepository.deleteAllByUser(user);
         fcmTokenRepository.deleteAllByUser(user);

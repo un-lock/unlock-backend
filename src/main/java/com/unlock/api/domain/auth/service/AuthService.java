@@ -191,6 +191,18 @@ public class AuthService {
         }
     }
 
+    /**
+     * 소셜 연동 해제 (탈퇴 시 호출)
+     */
+    public void unlinkSocial(AuthProvider provider, String socialId) {
+        if (socialId == null || provider == AuthProvider.EMAIL) return;
+
+        socialAuthServices.stream()
+                .filter(service -> service.getProvider() == provider)
+                .findFirst()
+                .ifPresent(service -> service.unlink(socialId));
+    }
+
     private void handleFcmToken(User user, String fcmToken) {
         fcmTokenRepository.findByToken(fcmToken)
                 .ifPresentOrElse(

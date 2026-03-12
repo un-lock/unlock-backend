@@ -5,5 +5,6 @@ import com.unlock.api.domain.user.entity.AuthProvider;
 
 public interface SocialAuthService {
     SocialProfile getProfile(String token);
+    void unlink(String socialId);
     AuthProvider getProvider();
 }

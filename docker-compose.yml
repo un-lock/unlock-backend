@@ -34,12 +34,12 @@ services:
       - JWT_REFRESH_TOKEN_VALIDITY=${JWT_REFRESH_TOKEN_VALIDITY}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
-      # Swagger 보안 인증 정보 추가
       - SWAGGER_USER=${SWAGGER_USER}
       - SWAGGER_PASSWORD=${SWAGGER_PASSWORD}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - KAKAO_ADMIN_KEY=${KAKAO_ADMIN_KEY}
       - TZ=Asia/Seoul
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
