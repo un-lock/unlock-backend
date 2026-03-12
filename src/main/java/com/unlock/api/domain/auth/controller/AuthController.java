@@ -120,8 +120,8 @@ public class AuthController {
         return ApiCommonResponse.success("로그아웃 성공", null);
     }
 
-    @Operation(summary = "카카오 로그인", description = "카카오 소셜 로그인을 수행합니다.")
-    @ApiResponse(responseCode = "200", description = "로그인 성공",
+    @Operation(summary = "카카오 로그인", description = "앱에서 획득한 카카오 액세스 토큰을 사용하여 소셜 로그인을 수행합니다.")
+    @ApiResponse(responseCode = "200", description = "로그인 성공 (Access Token 발급 및 Refresh Token 쿠키 설정)",
             content = @Content(schema = @Schema(implementation = TokenResponse.class)))
     @PostMapping("/kakao")
     public ApiCommonResponse<TokenResponse> kakaoLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
