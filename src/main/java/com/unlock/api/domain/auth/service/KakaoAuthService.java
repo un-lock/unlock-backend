@@ -5,11 +5,8 @@ import com.unlock.api.common.exception.ErrorCode;
 import com.unlock.api.domain.auth.dto.SocialProfile;
 import com.unlock.api.domain.user.entity.AuthProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
@@ -17,49 +14,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class KakaoAuthService implements SocialAuthService {
 
-    @Value("${kakao.client-id}")
-    private String clientId;
-
-    @Value("${kakao.client-secret}")
-    private String clientSecret;
-
-    @Value("${kakao.redirect-uri}")
-    private String redirectUri;
-
     private final RestTemplate restTemplate = new RestTemplate();
-
-    @Override
-    public SocialProfile getProfileByCode(String code) {
-        String accessToken = getAccessToken(code);
-        return getProfile(accessToken);
-    }
-
-    private String getAccessToken(String code) {
-        String KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("grant_type", "authorization_code");
-        params.add("client_id", clientId);
-        params.add("redirect_uri", redirectUri);
-        params.add("code", code);
-        params.add("client_secret", clientSecret);
-
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(KAKAO_TOKEN_URL, request, Map.class);
-            Map<String, Object> body = response.getBody();
-            if (body == null || body.get("access_token") == null) {
-                throw new BusinessException(ErrorCode.INVALID_TOKEN);
-            }
-            return (String) body.get("access_token");
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN);
-        }
-    }
 
     @Override
     public SocialProfile getProfile(String token) {

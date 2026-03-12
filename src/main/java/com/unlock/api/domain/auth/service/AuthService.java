@@ -6,6 +6,7 @@ import com.unlock.api.common.security.jwt.JwtTokenProvider;
 import com.unlock.api.domain.auth.dto.AuthDto.LoginRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.PasswordResetRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.SignupRequest;
+import com.unlock.api.domain.auth.dto.AuthDto.SocialLoginRequest;
 import com.unlock.api.domain.auth.dto.AuthDto.TokenResponse;
 import com.unlock.api.domain.auth.dto.SocialProfile;
 import com.unlock.api.domain.user.entity.AuthProvider;
@@ -114,13 +115,14 @@ public class AuthService {
     /**
      * 소셜 로그인 및 FCM 토큰 등록
      */
-    public LoginDto socialLogin(AuthProvider provider, String code, String fcmToken) {
+    public LoginDto socialLogin(AuthProvider provider, SocialLoginRequest request) {
         SocialAuthService socialAuthService = socialAuthServices.stream()
                 .filter(service -> service.getProvider() == provider)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 소셜 로그인입니다."));
 
-        SocialProfile profile = socialAuthService.getProfileByCode(code);
+        // 앱에서 획득한 accessToken을 사용하여 즉시 프로필 조회
+        SocialProfile profile = socialAuthService.getProfile(request.getToken());
 
         // 1. 소셜 ID로 사용자 조회 (이미 연동된 경우)
         User user = userRepository.findBySocialIdAndProvider(profile.getSocialId(), profile.getProvider())
@@ -147,8 +149,8 @@ public class AuthService {
                     });
         }
 
-        if (fcmToken != null) {
-            handleFcmToken(user, fcmToken);
+        if (request.getFcmToken() != null) {
+            handleFcmToken(user, request.getFcmToken());
         }
 
         return createTokenResponse(user);
