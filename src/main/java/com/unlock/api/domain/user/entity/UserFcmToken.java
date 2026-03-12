@@ -48,4 +48,8 @@ public class UserFcmToken {
     public void updateLastUsed() {
         this.lastUsedAt = LocalDateTime.now();
     }
+
+    public void updateUser(User user) {
+        this.user = user;
+    }
 }
