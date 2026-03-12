@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 질문 관련 API 컨트롤러
  */
-@Tag(name = "3. Question", description = "오늘의 질문 조회 및 배정 API")
+@Tag(name = "3. Question", description = "오늘의 질문 조회")
 @RestController
 @RequestMapping("/api/v1/questions")
 @RequiredArgsConstructor

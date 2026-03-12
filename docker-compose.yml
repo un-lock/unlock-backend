@@ -40,6 +40,7 @@ services:
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
       - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - TZ=Asia/Seoul
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs
       - ./firebase-key.json:/app/firebase-key.json:ro
