@@ -15,6 +15,7 @@ public enum NotificationType {
     COUPLE_REQUEST("커플 연결 신청"),
     COUPLE_CONNECTED("커플 연결 완료"),
     COUPLE_REQUEST_REJECTED("커플 연결 거절"),
+    COUPLE_REQUEST_CANCELLED("커플 연결 신청 취소"),
     COUPLE_DISCONNECTED("커플 연결 해제");
 
     private final String description;

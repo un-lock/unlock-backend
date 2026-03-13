@@ -231,7 +231,13 @@ public class CoupleService {
         if (targetIdStr == null) {
             throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
         }
+
+        User requester = userRepository.findById(userId).get();
+        User target = userRepository.findById(Long.parseLong(targetIdStr)).get();
+
         redisService.deleteCoupleRequest(Long.parseLong(targetIdStr));
+
+        fcmService.sendToUser(target, "un:lock 💔", requester.getNickname() + "님이 커플 연결 신청을 취소했습니다.", NotificationType.COUPLE_REQUEST_CANCELLED);
     }
 
     /**
