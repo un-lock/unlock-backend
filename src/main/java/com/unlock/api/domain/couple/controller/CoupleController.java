@@ -80,6 +80,14 @@ public class CoupleController {
         return ApiCommonResponse.success("보낸 신청 조회 성공", coupleService.getSentRequest(userId));
     }
 
+    @Operation(summary = "내가 보낸 연결 신청 취소")
+    @ApiResponse(responseCode = "200", description = "취소 성공")
+    @DeleteMapping("/requests/sent")
+    public ApiCommonResponse<Void> cancelSentRequest(@Parameter(hidden = true) @CurrentUser Long userId) {
+        coupleService.cancelSentRequest(userId);
+        return ApiCommonResponse.success("연결 신청을 취소했습니다.", null);
+    }
+
     @Operation(summary = "연결 신청 수락")
     @ApiResponse(responseCode = "200", description = "연결 성공")
     @PostMapping("/accept")

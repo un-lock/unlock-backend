@@ -224,6 +224,17 @@ public class CoupleService {
     }
 
     /**
+     * 내가 보낸 연결 신청 취소
+     */
+    public void cancelSentRequest(Long userId) {
+        String targetIdStr = redisService.getSentCoupleRequest(userId);
+        if (targetIdStr == null) {
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        }
+        redisService.deleteCoupleRequest(Long.parseLong(targetIdStr));
+    }
+
+    /**
      * 내가 보낸 연결 신청 정보 확인
      */
     @Transactional(readOnly = true)
