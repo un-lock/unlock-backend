@@ -127,12 +127,15 @@ public class AuthDto {
     @Schema(description = "소셜 로그인 요청 객체")
     public static class SocialLoginRequest {
         @NotBlank(message = "소셜 토큰은 필수입니다.")
-        @Schema(description = "소셜 플랫폼(Kakao, Google, Apple 등)에서 발급받은 인증 토큰(Access Token 또는 ID Token)", 
+        @Schema(description = "소셜 플랫폼(Kakao, Google, Apple 등)에서 발급받은 인증 토큰(Access Token 또는 ID Token)",
                 example = "CzZqD5Jvk0F2gZjthVKMtaK4BW1qeMzrAAAAAQoXBi4AAAGc4IuLdwGXonZVdqHq")
         private String token;
 
         @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
         private String fcmToken;
+
+        @Schema(description = "[Apple 전용] 앱에서 발급받은 authorizationCode (탈퇴 시 연동 해제에 사용)", example = "c1a2b3c4d5...")
+        private String authorizationCode;
     }
 
     @Getter

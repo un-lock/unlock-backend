@@ -149,6 +149,14 @@ public class AuthService {
                     });
         }
 
+        // [Apple 전용] authorizationCode → refresh_token 교환 후 저장 (탈퇴 시 revoke에 사용)
+        if (provider == AuthProvider.APPLE && request.getAuthorizationCode() != null) {
+            String appleRefreshToken = socialAuthService.exchangeCode(request.getAuthorizationCode());
+            if (appleRefreshToken != null) {
+                user.updateAppleRefreshToken(appleRefreshToken);
+            }
+        }
+
         if (request.getFcmToken() != null) {
             handleFcmToken(user, request.getFcmToken());
         }
@@ -193,14 +201,20 @@ public class AuthService {
 
     /**
      * 소셜 연동 해제 (탈퇴 시 호출)
+     * - 카카오: socialId로 unlink
+     * - 애플: appleRefreshToken으로 revoke
      */
-    public void unlinkSocial(AuthProvider provider, String socialId) {
-        if (socialId == null || provider == AuthProvider.EMAIL) return;
+    public void unlinkSocial(User user) {
+        if (user.getProvider() == AuthProvider.EMAIL) return;
+
+        String unlinkToken = user.getProvider() == AuthProvider.APPLE
+                ? user.getAppleRefreshToken()
+                : user.getSocialId();
 
         socialAuthServices.stream()
-                .filter(service -> service.getProvider() == provider)
+                .filter(service -> service.getProvider() == user.getProvider())
                 .findFirst()
-                .ifPresent(service -> service.unlink(socialId));
+                .ifPresent(service -> service.unlink(unlinkToken));
     }
 
     private void handleFcmToken(User user, String fcmToken) {

@@ -78,10 +78,8 @@ public class UserService {
             coupleService.breakup(userId);
         }
 
-        // 2. 소셜 연동 해제 (카카오 등 소셜 로그인인 경우)
-        if (user.getProvider() != AuthProvider.EMAIL) {
-            authService.unlinkSocial(user.getProvider(), user.getSocialId());
-        }
+        // 2. 소셜 연동 해제 (카카오, 애플 등 소셜 로그인인 경우)
+        authService.unlinkSocial(user);
 
         // 3. 유저 개인 데이터 연쇄 파기 (커플이 아니었더라도 남아있을 수 있는 데이터 정리)
         answerRevealRepository.deleteAllByUser(user);

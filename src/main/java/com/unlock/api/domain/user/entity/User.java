@@ -55,6 +55,9 @@ public class User extends BaseTimeEntity {
     @Column(unique = true)
     private String socialId; // 소셜 로그인 고유 식별자 (카카오 등)
 
+    @Column
+    private String appleRefreshToken; // Apple 탈퇴(revoke) 시 사용
+
     @Column(nullable = false, unique = true)
     private String inviteCode;
 
@@ -99,5 +102,9 @@ public class User extends BaseTimeEntity {
     public void updateSocialInfo(String socialId, AuthProvider provider) {
         this.socialId = socialId;
         this.provider = provider;
+    }
+
+    public void updateAppleRefreshToken(String appleRefreshToken) {
+        this.appleRefreshToken = appleRefreshToken;
     }
 }
