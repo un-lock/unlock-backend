@@ -6,6 +6,7 @@ import com.unlock.api.domain.couple.dto.CoupleDto.ConnectRequest;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.NotificationTimeRequest;
+import com.unlock.api.domain.couple.dto.CoupleDto.SentCoupleRequestResponse;
 import com.unlock.api.domain.couple.service.CoupleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,9 +67,17 @@ public class CoupleController {
     @Operation(summary = "나에게 온 연결 신청 확인")
     @ApiResponse(responseCode = "200", description = "조회 성공",
             content = @Content(schema = @Schema(implementation = CoupleRequestResponse.class)))
-    @GetMapping("/requests")
+    @GetMapping("/requests/received")
     public ApiCommonResponse<CoupleRequestResponse> getReceivedRequest(@Parameter(hidden = true) @CurrentUser Long userId) {
         return ApiCommonResponse.success("받은 신청 조회 성공", coupleService.getReceivedRequest(userId));
+    }
+
+    @Operation(summary = "내가 보낸 연결 신청 확인", description = "내가 상대방에게 보낸 커플 연결 신청 정보를 조회합니다. 신청 내역이 없으면 null을 반환합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = SentCoupleRequestResponse.class)))
+    @GetMapping("/requests/sent")
+    public ApiCommonResponse<SentCoupleRequestResponse> getSentRequest(@Parameter(hidden = true) @CurrentUser Long userId) {
+        return ApiCommonResponse.success("보낸 신청 조회 성공", coupleService.getSentRequest(userId));
     }
 
     @Operation(summary = "연결 신청 수락")

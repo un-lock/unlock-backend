@@ -76,27 +76,36 @@ public class RedisService {
 
     /**
      * 커플 연결 신청 저장 (24시간 유효)
+     * - CP_REQ:{받는사람ID} = {보낸사람ID}  → 받는 사람이 신청 확인용
+     * - CP_REQ_SENT:{보낸사람ID} = {받는사람ID}  → 보낸 사람이 신청 현황 확인용
      */
     public void saveCoupleRequest(Long targetUserId, Long requesterId) {
-        redisTemplate.opsForValue().set(
-                "CP_REQ:" + targetUserId,
-                requesterId.toString(),
-                24,
-                TimeUnit.HOURS
-        );
+        redisTemplate.opsForValue().set("CP_REQ:" + targetUserId, requesterId.toString(), 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set("CP_REQ_SENT:" + requesterId, targetUserId.toString(), 24, TimeUnit.HOURS);
     }
 
     /**
-     * 커플 연결 신청 조회
+     * 나에게 온 커플 연결 신청 조회
      */
     public String getCoupleRequest(Long targetUserId) {
         return redisTemplate.opsForValue().get("CP_REQ:" + targetUserId);
     }
 
     /**
-     * 커플 연결 신청 삭제 (수락/거절 시)
+     * 내가 보낸 커플 연결 신청 조회
+     */
+    public String getSentCoupleRequest(Long requesterId) {
+        return redisTemplate.opsForValue().get("CP_REQ_SENT:" + requesterId);
+    }
+
+    /**
+     * 커플 연결 신청 삭제 (수락/거절 시) — 양방향 키 모두 삭제
      */
     public void deleteCoupleRequest(Long targetUserId) {
+        String requesterIdStr = redisTemplate.opsForValue().get("CP_REQ:" + targetUserId);
         redisTemplate.delete("CP_REQ:" + targetUserId);
+        if (requesterIdStr != null) {
+            redisTemplate.delete("CP_REQ_SENT:" + requesterIdStr);
+        }
     }
 }

@@ -66,4 +66,12 @@ public class CoupleDto {
         @Schema(description = "신청자 닉네임", example = "설레는시작")
         private String requesterNickname;
     }
+
+    @Getter
+    @Builder
+    @Schema(description = "내가 보낸 연결 신청 정보")
+    public static class SentCoupleRequestResponse {
+        @Schema(description = "신청 받은 상대방 닉네임", example = "두근두근")
+        private String targetNickname;
+    }
 }

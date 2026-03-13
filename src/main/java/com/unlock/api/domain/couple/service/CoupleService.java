@@ -9,6 +9,7 @@ import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
+import com.unlock.api.domain.couple.dto.CoupleDto.SentCoupleRequestResponse;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.couple.repository.CoupleRepository;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
@@ -219,6 +220,20 @@ public class CoupleService {
         return CoupleRequestResponse.builder()
                 .requesterId(requester.getId())
                 .requesterNickname(requester.getNickname())
+                .build();
+    }
+
+    /**
+     * 내가 보낸 연결 신청 정보 확인
+     */
+    @Transactional(readOnly = true)
+    public SentCoupleRequestResponse getSentRequest(Long userId) {
+        String targetIdStr = redisService.getSentCoupleRequest(userId);
+        if (targetIdStr == null) return null;
+
+        User target = userRepository.findById(Long.parseLong(targetIdStr)).get();
+        return SentCoupleRequestResponse.builder()
+                .targetNickname(target.getNickname())
                 .build();
     }
 
