@@ -121,7 +121,7 @@ public class AuthService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 소셜 로그인입니다."));
 
-        // 앱에서 획득한 accessToken을 사용하여 즉시 프로필 조회
+        // 앱에서 획득한 Token을 사용하여 즉시 프로필 조회
         SocialProfile profile = socialAuthService.getProfile(request.getToken());
 
         // 1. 소셜 ID로 사용자 조회 (이미 연동된 경우)

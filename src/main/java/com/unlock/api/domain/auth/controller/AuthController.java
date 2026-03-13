@@ -130,6 +130,16 @@ public class AuthController {
         return ApiCommonResponse.success("카카오 로그인 성공", loginDto.toTokenResponse());
     }
 
+    @Operation(summary = "애플 로그인", description = "앱에서 획득한 Apple identityToken을 사용하여 소셜 로그인을 수행합니다.")
+    @ApiResponse(responseCode = "200", description = "로그인 성공 (Access Token 발급 및 Refresh Token 쿠키 설정)",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class)))
+    @PostMapping("/apple")
+    public ApiCommonResponse<TokenResponse> appleLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
+        LoginDto loginDto = authService.socialLogin(AuthProvider.APPLE, request);
+        setRefreshTokenCookie(response, loginDto.getRefreshToken());
+        return ApiCommonResponse.success("애플 로그인 성공", loginDto.toTokenResponse());
+    }
+
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
         cookie.setHttpOnly(true);
