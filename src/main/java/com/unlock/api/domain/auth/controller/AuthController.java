@@ -115,7 +115,9 @@ public class AuthController {
             @Parameter(hidden = true) @CurrentUser Long userId,
             @RequestBody(required = false) LogoutRequest request,
             HttpServletResponse response) {
-        authService.logout(userId, request != null ? request.getFcmToken() : null);
+        if (userId != null) {
+            authService.logout(userId, request != null ? request.getFcmToken() : null);
+        }
         deleteRefreshTokenCookie(response);
         return ApiCommonResponse.success("로그아웃 성공", null);
     }
