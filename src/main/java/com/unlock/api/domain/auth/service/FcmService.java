@@ -42,6 +42,34 @@ public class FcmService {
     }
 
     /**
+     * 특정 유저에게 Silent Push를 발송합니다. (알림 트레이에 표시 안됨)
+     * 앱이 포그라운드/백그라운드에서 조용히 수신하여 화면을 갱신할 때 사용합니다.
+     * 예: 광고 시청 후 파트너 답변 unlock 완료 신호
+     */
+    @Async
+    public void sendSilentToUser(User user, NotificationType type) {
+        List<String> tokens = fcmTokenRepository.findAllByUser(user).stream()
+                .map(UserFcmToken::getToken)
+                .collect(Collectors.toList());
+
+        if (tokens.isEmpty()) return;
+
+        List<Message> messages = tokens.stream()
+                .map(token -> Message.builder()
+                        .setToken(token)
+                        .putData("type", type.name()) // 알림 없이 데이터만 전송
+                        .build())
+                .collect(Collectors.toList());
+
+        try {
+            FirebaseMessaging.getInstance().sendEach(messages);
+            log.info("[FCM] Silent Push {} 건 발송 완료 (Type: {})", tokens.size(), type);
+        } catch (Exception e) {
+            log.error("[FCM] Silent Push 발송 에러: {}", e.getMessage());
+        }
+    }
+
+    /**
      * 여러 기기에 푸시 알림을 발송합니다. (타입 정보 포함)
      */
     @Async

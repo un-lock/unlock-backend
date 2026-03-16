@@ -16,7 +16,8 @@ public enum NotificationType {
     COUPLE_CONNECTED("커플 연결 완료"),
     COUPLE_REQUEST_REJECTED("커플 연결 거절"),
     COUPLE_REQUEST_CANCELLED("커플 연결 신청 취소"),
-    COUPLE_DISCONNECTED("커플 연결 해제");
+    COUPLE_DISCONNECTED("커플 연결 해제"),
+    ANSWER_UNLOCKED("광고 시청으로 파트너 답변 잠금 해제 완료");
 
     private final String description;
 }

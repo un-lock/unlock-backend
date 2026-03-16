@@ -2,7 +2,11 @@ package com.unlock.api.domain.admob.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unlock.api.domain.answer.service.AnswerService;
+import com.unlock.api.domain.auth.entity.NotificationType;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
+import com.unlock.api.domain.user.entity.User;
+import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +42,8 @@ public class AdmobSsvService {
 
     private final AnswerService answerService;
     private final RedisService redisService;
+    private final FcmService fcmService;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -98,6 +104,11 @@ public class AdmobSsvService {
             answerService.unlockByAd(userId, answerId);
             redisService.markAdmobTransactionProcessed(transactionId);
             log.info("[SSV] unlock 완료 - userId: {}, answerId: {}, transactionId: {}", userId, answerId, transactionId);
+
+            // 6. Silent Push → 알림 트레이에 표시 없이 앱이 조용히 화면 갱신
+            userRepository.findById(userId).ifPresent(user ->
+                    fcmService.sendSilentToUser(user, NotificationType.ANSWER_UNLOCKED)
+            );
         } catch (Exception e) {
             log.error("[SSV] unlock 처리 중 오류 - userId: {}, answerId: {}, error: {}", userId, answerId, e.getMessage());
         }
