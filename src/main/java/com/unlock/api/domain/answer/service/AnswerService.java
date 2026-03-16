@@ -101,6 +101,7 @@ public class AnswerService {
         return TodayAnswerResponse.builder()
                 .myAnswer(convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))
+                .isCoupleSubscribed(couple.isSubscribed())
                 .build();
     }
 
@@ -108,31 +109,56 @@ public class AnswerService {
      * 파트너 답변 잠금 해제 (Unlock)
      * 광고 시청 완료 시 호출되며, 해당 답변에 대한 영구적인 열람 권한을 기록합니다.
      */
+    /**
+     * 파트너 답변 잠금 해제 - 프리미엄 전용 (직접 API 호출)
+     * 비구독자는 광고 시청(SSV)을 통해 unlockByAd()로만 해제 가능
+     */
     public void revealPartnerAnswer(Long userId, Long answerId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. 해제 대상 답변 존재 확인
+        Couple couple = user.getCouple();
+        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+
+        // 프리미엄 구독자만 직접 호출 가능
+        if (!couple.isSubscribed()) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        saveReveal(user, answerId);
+    }
+
+    /**
+     * 파트너 답변 잠금 해제 - 광고 시청(SSV) 전용
+     * AdmobSsvService에서만 호출. 프리미엄 체크 없음.
+     */
+    public void unlockByAd(Long userId, Long answerId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        saveReveal(user, answerId);
+    }
+
+    /**
+     * 공통 unlock 처리 (검증 + 저장)
+     */
+    private void saveReveal(User user, Long answerId) {
         Answer targetAnswer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
 
-        // 2. 보안 검증: 본인 답변은 해제 불필요
-        if (targetAnswer.getUser().getId().equals(userId)) {
+        if (targetAnswer.getUser().getId().equals(user.getId())) {
             throw new BusinessException("자신의 답변은 해제할 필요가 없습니다.", ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 3. 보안 검증: 실제 내 파트너의 답변이 맞는지 확인
         Couple couple = user.getCouple();
         if (couple == null || !targetAnswer.getUser().getCouple().getId().equals(couple.getId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
-        // 4. 비즈니스 검증: 상대방이 답변을 실제로 완료했는지 확인
         if (targetAnswer.getContent() == null || targetAnswer.getContent().isBlank()) {
             throw new BusinessException(ErrorCode.PARTNER_NOT_ANSWERED);
         }
 
-        // 5. 열람 기록 저장 (중복 기록 방지)
         if (!answerRevealRepository.existsByUserAndAnswer(user, targetAnswer)) {
             answerRevealRepository.save(AnswerReveal.builder()
                     .user(user)
