@@ -211,6 +211,7 @@ public class AppleAuthService implements SocialAuthService {
      */
     private String generateClientSecret() throws Exception {
         String cleanKey = privateKeyStr
+                .replace("\\n", "")
                 .replaceAll("-----BEGIN PRIVATE KEY-----", "")
                 .replaceAll("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
