@@ -108,4 +108,20 @@ public class RedisService {
             redisTemplate.delete("CP_REQ_SENT:" + requesterIdStr);
         }
     }
+
+    /**
+     * AdMob SSV transaction_id 중복 처리 여부 확인
+     * Google이 네트워크 오류로 동일한 콜백을 여러 번 보낼 수 있어 중복 방지 필요
+     * @return 이미 처리된 경우 true
+     */
+    public boolean isAdmobTransactionProcessed(String transactionId) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey("ADMOB_TX:" + transactionId));
+    }
+
+    /**
+     * AdMob SSV transaction_id 처리 완료 기록 (7일 보관)
+     */
+    public void markAdmobTransactionProcessed(String transactionId) {
+        redisTemplate.opsForValue().set("ADMOB_TX:" + transactionId, "1", 7, TimeUnit.DAYS);
+    }
 }

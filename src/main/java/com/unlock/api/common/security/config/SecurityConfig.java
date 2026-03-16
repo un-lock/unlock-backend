@@ -59,7 +59,7 @@ public class SecurityConfig {
                 )
                 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/health", "/api/v1/auth/**").permitAll()
+                        .requestMatchers("/health", "/api/v1/auth/**", "/api/v1/admob/ssv").permitAll()
                         // Swagger 경로는 인증(아이디/비번)된 사용자만 허용
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").authenticated()
                         .anyRequest().authenticated()
