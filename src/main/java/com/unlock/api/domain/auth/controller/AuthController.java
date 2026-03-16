@@ -132,6 +132,16 @@ public class AuthController {
         return ApiCommonResponse.success("카카오 로그인 성공", loginDto.toTokenResponse());
     }
 
+    @Operation(summary = "구글 로그인", description = "앱에서 획득한 Google idToken을 사용하여 소셜 로그인을 수행합니다. authorizationCode(serverAuthCode)를 함께 전송하면 탈퇴 시 연동 해제가 가능합니다.")
+    @ApiResponse(responseCode = "200", description = "로그인 성공 (Access Token 발급 및 Refresh Token 쿠키 설정)",
+            content = @Content(schema = @Schema(implementation = TokenResponse.class)))
+    @PostMapping("/google")
+    public ApiCommonResponse<TokenResponse> googleLogin(@RequestBody @Valid SocialLoginRequest request, HttpServletResponse response) {
+        LoginDto loginDto = authService.socialLogin(AuthProvider.GOOGLE, request);
+        setRefreshTokenCookie(response, loginDto.getRefreshToken());
+        return ApiCommonResponse.success("구글 로그인 성공", loginDto.toTokenResponse());
+    }
+
     @Operation(summary = "애플 로그인", description = "앱에서 획득한 Apple identityToken을 사용하여 소셜 로그인을 수행합니다.")
     @ApiResponse(responseCode = "200", description = "로그인 성공 (Access Token 발급 및 Refresh Token 쿠키 설정)",
             content = @Content(schema = @Schema(implementation = TokenResponse.class)))

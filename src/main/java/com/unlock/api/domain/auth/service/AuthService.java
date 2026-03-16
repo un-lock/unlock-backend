@@ -149,11 +149,18 @@ public class AuthService {
                     });
         }
 
-        // [Apple 전용] authorizationCode → refresh_token 교환 후 저장 (탈퇴 시 revoke에 사용)
-        if (provider == AuthProvider.APPLE && request.getAuthorizationCode() != null) {
-            String appleRefreshToken = socialAuthService.exchangeCode(request.getAuthorizationCode());
-            if (appleRefreshToken != null) {
-                user.updateAppleRefreshToken(appleRefreshToken);
+        // [Apple/Google 전용] authorizationCode → refresh_token 교환 후 저장 (탈퇴 시 revoke에 사용)
+        if (request.getAuthorizationCode() != null) {
+            if (provider == AuthProvider.APPLE) {
+                String appleRefreshToken = socialAuthService.exchangeCode(request.getAuthorizationCode());
+                if (appleRefreshToken != null) {
+                    user.updateAppleRefreshToken(appleRefreshToken);
+                }
+            } else if (provider == AuthProvider.GOOGLE) {
+                String googleRefreshToken = socialAuthService.exchangeCode(request.getAuthorizationCode());
+                if (googleRefreshToken != null) {
+                    user.updateGoogleRefreshToken(googleRefreshToken);
+                }
             }
         }
 
@@ -203,13 +210,16 @@ public class AuthService {
      * 소셜 연동 해제 (탈퇴 시 호출)
      * - 카카오: socialId로 unlink
      * - 애플: appleRefreshToken으로 revoke
+     * - 구글: googleRefreshToken으로 revoke
      */
     public void unlinkSocial(User user) {
         if (user.getProvider() == AuthProvider.EMAIL) return;
 
-        String unlinkToken = user.getProvider() == AuthProvider.APPLE
-                ? user.getAppleRefreshToken()
-                : user.getSocialId();
+        String unlinkToken = switch (user.getProvider()) {
+            case APPLE  -> user.getAppleRefreshToken();
+            case GOOGLE -> user.getGoogleRefreshToken();
+            default     -> user.getSocialId(); // KAKAO
+        };
 
         socialAuthServices.stream()
                 .filter(service -> service.getProvider() == user.getProvider())

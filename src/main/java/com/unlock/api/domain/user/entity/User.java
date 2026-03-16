@@ -58,6 +58,9 @@ public class User extends BaseTimeEntity {
     @Column
     private String appleRefreshToken; // Apple 탈퇴(revoke) 시 사용
 
+    @Column
+    private String googleRefreshToken; // Google 탈퇴(revoke) 시 사용
+
     @Column(nullable = false, unique = true)
     private String inviteCode;
 
@@ -106,5 +109,9 @@ public class User extends BaseTimeEntity {
 
     public void updateAppleRefreshToken(String appleRefreshToken) {
         this.appleRefreshToken = appleRefreshToken;
+    }
+
+    public void updateGoogleRefreshToken(String googleRefreshToken) {
+        this.googleRefreshToken = googleRefreshToken;
     }
 }
