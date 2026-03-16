@@ -30,9 +30,12 @@ public class AnswerDto {
     public static class TodayAnswerResponse {
         @Schema(description = "나의 답변 정보")
         private MyAnswerDto myAnswer;
-        
+
         @Schema(description = "상대방의 답변 정보")
         private PartnerAnswerDto partnerAnswer;
+
+        @Schema(description = "커플 프리미엄 구독 여부 (true면 광고 없이 바로 열람 가능)", example = "false")
+        private boolean isCoupleSubscribed;
     }
 
     @Getter

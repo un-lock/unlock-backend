@@ -49,8 +49,12 @@ public class AnswerController {
         return ApiCommonResponse.success("오늘의 답변 조회 성공", answerService.getTodayAnswers(userId));
     }
 
-    @Operation(summary = "파트너 답변 잠금 해제 (Reveal)")
+    @Operation(
+            summary = "파트너 답변 잠금 해제 - 프리미엄 전용",
+            description = "프리미엄 구독자만 호출 가능합니다. 비구독자는 광고 시청(SSV)을 통해 자동으로 해제됩니다."
+    )
     @ApiResponse(responseCode = "200", description = "공개 성공")
+    @ApiResponse(responseCode = "403", description = "프리미엄 구독자가 아님")
     @PostMapping("/{answerId}/reveal")
     public ApiCommonResponse<Void> revealPartnerAnswer(
             @Parameter(hidden = true) @CurrentUser Long userId,
