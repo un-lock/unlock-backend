@@ -208,15 +208,28 @@ public class AppleAuthService implements SocialAuthService {
      * Apple API 호출에 필요한 client_secret JWT 생성
      * - 알고리즘: ES256 (.p8 EC 개인키로 서명)
      * - 유효기간: 6개월
+     *
+     * [파싱 수정] 환경변수/YAML에 따라 \n이 리터럴(백슬래시+n) 또는 실제 줄바꿈으로 올 수 있음
      */
     private String generateClientSecret() throws Exception {
-        String cleanKey = privateKeyStr
-                .replace("\\n", "")
-                .replaceAll("-----BEGIN PRIVATE KEY-----", "")
-                .replaceAll("-----END PRIVATE KEY-----", "")
-                .replaceAll("\\s+", "");
+        if (privateKeyStr == null || privateKeyStr.isBlank()) {
+            throw new IllegalStateException("[APPLE] apple.private-key 설정이 비어 있습니다.");
+        }
 
-        byte[] keyBytes  = Base64.getDecoder().decode(cleanKey);
+        // 1) 리터럴 \n (env), 실제 \n (YAML multiline), \r\n 모두 제거하여 Base64만 추출
+        String cleanKey = privateKeyStr
+                .replace("\\n", "\n")
+                .replace("\\r", "\r")
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s+", "")
+                .trim();
+
+        if (cleanKey.isEmpty()) {
+            throw new IllegalStateException("[APPLE] apple.private-key에서 Base64 내용을 추출할 수 없습니다. PEM 헤더/푸터와 함께 올바르게 설정했는지 확인하세요.");
+        }
+
+        byte[] keyBytes = Base64.getDecoder().decode(cleanKey);
         PrivateKey privateKey = KeyFactory.getInstance("EC")
                 .generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
 
