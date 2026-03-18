@@ -84,6 +84,7 @@ public class AdmobSsvService {
         }
         String message = rawQueryString.substring(0, keyIdIndex);
         long keyId = Long.parseLong(keyIdStr);
+        log.info("[SSV] 서명 검증 대상 message: {}", message);
 
         if (!verifySignature(message, keyId, signatureB64)) {
             log.warn("[SSV] 서명 검증 실패 - transactionId: {}", transactionId);
