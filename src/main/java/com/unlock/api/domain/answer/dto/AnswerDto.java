@@ -1,5 +1,6 @@
 package com.unlock.api.domain.answer.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -34,6 +35,7 @@ public class AnswerDto {
         @Schema(description = "상대방의 답변 정보")
         private PartnerAnswerDto partnerAnswer;
 
+        @JsonProperty("isCoupleSubscribed")
         @Schema(description = "커플 프리미엄 구독 여부 (true면 광고 없이 바로 열람 가능)", example = "false")
         private boolean isCoupleSubscribed;
     }
@@ -65,9 +67,11 @@ public class AnswerDto {
         @Schema(description = "상대방 답변 내용 (잠긴 경우 'LOCKED' 반환)", example = "LOCKED")
         private String content;
 
+        @JsonProperty("isWritten")
         @Schema(description = "상대방 작성 여부", example = "true")
         private boolean isWritten;
 
+        @JsonProperty("isRevealed")
         @Schema(description = "내가 답변을 볼 수 있는 권한 여부", example = "false")
         private boolean isRevealed;
 

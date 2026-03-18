@@ -1,5 +1,6 @@
 package com.unlock.api.domain.answer.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlock.api.domain.question.entity.QuestionCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -60,6 +61,7 @@ public class ArchiveDto {
         @Schema(description = "파트너의 답변 정보")
         private AnswerDto.PartnerAnswerDto partnerAnswer;
 
+        @JsonProperty("isCoupleSubscribed")
         @Schema(description = "커플 프리미엄 구독 여부", example = "false")
         private boolean isCoupleSubscribed;
     }
