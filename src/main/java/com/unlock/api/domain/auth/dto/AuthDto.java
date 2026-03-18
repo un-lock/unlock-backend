@@ -1,5 +1,6 @@
 package com.unlock.api.domain.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -149,6 +150,7 @@ public class AuthDto {
         @Schema(description = "사용자 닉네임", example = "달콤한연인")
         private String nickname;
         
+        @JsonProperty("isCoupleConnected")
         @Schema(description = "커플 연결 여부", example = "false")
         private boolean isCoupleConnected;
     }
