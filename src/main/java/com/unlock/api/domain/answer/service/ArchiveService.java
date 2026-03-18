@@ -47,7 +47,7 @@ public class ArchiveService {
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
         // [고도화]: 자바 루프 없이 DB에서 DTO 리스트를 한꺼번에 뽑아옵니다.
-        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), year, month);
+        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), couple.isSubscribed(), year, month);
     }
 
     /**
@@ -63,7 +63,7 @@ public class ArchiveService {
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
         // Querydsl을 통해 페이징 및 정렬이 적용된 리스트를 가져옵니다.
-        return answerRepository.findArchiveList(couple, userId, partner.getId(), page, size, sort);
+        return answerRepository.findArchiveList(couple, userId, partner.getId(), couple.isSubscribed(), page, size, sort);
     }
 
     /**
@@ -100,6 +100,7 @@ public class ArchiveService {
                 .date(targetCq.getAssignedDate())
                 .myAnswer(myAnswer == null ? null : convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))
+                .isCoupleSubscribed(couple.isSubscribed())
                 .build();
     }
 

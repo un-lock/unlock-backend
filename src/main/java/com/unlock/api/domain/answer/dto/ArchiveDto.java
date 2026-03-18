@@ -34,6 +34,9 @@ public class ArchiveDto {
 
         @Schema(description = "파트너의 답변 여부", example = "true")
         private Boolean partnerAnswered;
+
+        @Schema(description = "파트너 답변 열람 가능 여부 (구독 중이거나 광고 시청 완료)", example = "true")
+        private Boolean isRevealed;
     }
 
     @Getter
@@ -56,5 +59,8 @@ public class ArchiveDto {
 
         @Schema(description = "파트너의 답변 정보")
         private AnswerDto.PartnerAnswerDto partnerAnswer;
+
+        @Schema(description = "커플 프리미엄 구독 여부", example = "false")
+        private boolean isCoupleSubscribed;
     }
 }
