@@ -76,13 +76,13 @@ public class AdmobSsvService {
         }
 
         // 3. Google 서명 검증
-        // message = 쿼리 스트링에서 "&key_id=..." 이전까지
-        int keyIdIndex = rawQueryString.indexOf("&key_id=");
-        if (keyIdIndex == -1) {
-            log.warn("[SSV] 쿼리 스트링에서 key_id를 찾을 수 없음");
+        // message = 쿼리 스트링에서 "&signature=..." 이전까지 (signature, key_id 제외)
+        int signatureIndex = rawQueryString.indexOf("&signature=");
+        if (signatureIndex == -1) {
+            log.warn("[SSV] 쿼리 스트링에서 signature를 찾을 수 없음");
             return;
         }
-        String message = rawQueryString.substring(0, keyIdIndex);
+        String message = rawQueryString.substring(0, signatureIndex);
         long keyId = Long.parseLong(keyIdStr);
         log.info("[SSV] 서명 검증 대상 message: {}", message);
 
