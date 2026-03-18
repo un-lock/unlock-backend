@@ -131,18 +131,20 @@ public class AnswerService {
     /**
      * 파트너 답변 잠금 해제 - 광고 시청(SSV) 전용
      * AdmobSsvService에서만 호출. 프리미엄 체크 없음.
+     * @return unlock된 답변의 questionId
      */
-    public void unlockByAd(Long userId, Long answerId) {
+    public Long unlockByAd(Long userId, Long answerId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        saveReveal(user, answerId);
+        return saveReveal(user, answerId);
     }
 
     /**
      * 공통 unlock 처리 (검증 + 저장)
+     * @return unlock된 답변의 questionId
      */
-    private void saveReveal(User user, Long answerId) {
+    private Long saveReveal(User user, Long answerId) {
         Answer targetAnswer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
 
@@ -165,6 +167,8 @@ public class AnswerService {
                     .answer(targetAnswer)
                     .build());
         }
+
+        return targetAnswer.getQuestion().getId();
     }
 
     /**

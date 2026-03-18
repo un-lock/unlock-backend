@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -93,24 +94,28 @@ public class AdmobSsvService {
             return;
         }
 
-        // 4. custom_data 파싱: "userId:answerId" 형식
+        // 4. custom_data 파싱: "userId:answerId:source" 형식 (source: home | archive)
         String[] parts = customData.split(":");
-        if (parts.length != 2) {
+        if (parts.length != 3) {
             log.warn("[SSV] custom_data 형식 오류: {}", customData);
             return;
         }
         long userId   = Long.parseLong(parts[0]);
         long answerId = Long.parseLong(parts[1]);
+        String source = parts[2];
 
         // 5. unlock 처리
         try {
-            answerService.unlockByAd(userId, answerId);
+            long questionId = answerService.unlockByAd(userId, answerId);
             redisService.markAdmobTransactionProcessed(transactionId);
-            log.info("[SSV] unlock 완료 - userId: {}, answerId: {}, transactionId: {}", userId, answerId, transactionId);
+            log.info("[SSV] unlock 완료 - userId: {}, answerId: {}, questionId: {}, source: {}, transactionId: {}", userId, answerId, questionId, source, transactionId);
 
-            // 6. Silent Push → 알림 트레이에 표시 없이 앱이 조용히 화면 갱신
+            // 6. Silent Push → source, questionId 포함하여 앱이 조용히 화면 갱신
             userRepository.findById(userId).ifPresent(user ->
-                    fcmService.sendSilentToUser(user, NotificationType.ANSWER_UNLOCKED)
+                    fcmService.sendSilentToUser(user, NotificationType.ANSWER_UNLOCKED, Map.of(
+                            "source", source,
+                            "questionId", String.valueOf(questionId)
+                    ))
             );
         } catch (Exception e) {
             log.error("[SSV] unlock 처리 중 오류 - userId: {}, answerId: {}, error: {}", userId, answerId, e.getMessage());

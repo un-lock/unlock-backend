@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +65,35 @@ public class FcmService {
         try {
             FirebaseMessaging.getInstance().sendEach(messages);
             log.info("[FCM] Silent Push {} 건 발송 완료 (Type: {})", tokens.size(), type);
+        } catch (Exception e) {
+            log.error("[FCM] Silent Push 발송 에러: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 특정 유저에게 Silent Push를 발송합니다. (추가 데이터 포함)
+     */
+    @Async
+    public void sendSilentToUser(User user, NotificationType type, Map<String, String> extraData) {
+        List<String> tokens = fcmTokenRepository.findAllByUser(user).stream()
+                .map(UserFcmToken::getToken)
+                .collect(Collectors.toList());
+
+        if (tokens.isEmpty()) return;
+
+        List<Message> messages = tokens.stream()
+                .map(token -> {
+                    Message.Builder builder = Message.builder()
+                            .setToken(token)
+                            .putData("type", type.name());
+                    extraData.forEach(builder::putData);
+                    return builder.build();
+                })
+                .collect(Collectors.toList());
+
+        try {
+            FirebaseMessaging.getInstance().sendEach(messages);
+            log.info("[FCM] Silent Push {} 건 발송 완료 (Type: {}, data: {})", tokens.size(), type, extraData);
         } catch (Exception e) {
             log.error("[FCM] Silent Push 발송 에러: {}", e.getMessage());
         }
