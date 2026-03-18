@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
@@ -82,7 +83,8 @@ public class AdmobSsvService {
             log.warn("[SSV] 쿼리 스트링에서 signature를 찾을 수 없음");
             return;
         }
-        String message = rawQueryString.substring(0, signatureIndex);
+        // Google은 URL 디코딩된 메시지에 서명함
+        String message = URLDecoder.decode(rawQueryString.substring(0, signatureIndex), StandardCharsets.UTF_8);
         long keyId = Long.parseLong(keyIdStr);
         log.info("[SSV] 서명 검증 대상 message: {}", message);
 
