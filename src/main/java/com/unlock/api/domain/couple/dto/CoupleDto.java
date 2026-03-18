@@ -1,6 +1,5 @@
 package com.unlock.api.domain.couple.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,9 +43,8 @@ public class CoupleDto {
         @Schema(description = "나의 초대 코드", example = "XYZ789FG")
         private String inviteCode;
 
-        @JsonProperty("isConnected")
         @Schema(description = "커플 연결 여부", example = "true")
-        private boolean isConnected;
+        private Boolean isConnected;
 
         @Schema(description = "상대방 닉네임 (연결 안된 경우 null)", example = "달콤한연인")
         private String partnerNickname;

@@ -1,6 +1,5 @@
 package com.unlock.api.domain.question.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.unlock.api.domain.question.entity.QuestionCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -25,8 +24,7 @@ public class QuestionDto {
         @Schema(description = "질문 카테고리", implementation = QuestionCategory.class, example = "DAILY")
         private QuestionCategory category;
 
-        @JsonProperty("isAnswered")
         @Schema(description = "현재 사용자의 답변 완료 여부", example = "true")
-        private boolean isAnswered;
+        private Boolean isAnswered;
     }
 }
