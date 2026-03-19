@@ -9,10 +9,9 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum QuestionCategory {
-    DAILY("일상"),
-    ROMANCE("로맨틱"),
-    SPICY("은밀한"),
-    DEEP_TALK("가치관");
+    SWEET("일상"),
+    SPICY("매운맛"),
+    HOT_SPICY("제일 매운맛");
 
     private final String description;
 }
