@@ -60,6 +60,7 @@ public class CoupleService {
         String partnerNickname = null;
         LocalDate startDate = null;
         LocalTime notificationTime = null;
+        Boolean isHotSpicyEnabled = null;
 
         if (isConnected) {
             Couple couple = user.getCouple();
@@ -67,6 +68,7 @@ public class CoupleService {
             partnerNickname = partner.getNickname();
             startDate = couple.getStartDate();
             notificationTime = couple.getNotificationTime();
+            isHotSpicyEnabled = couple.isHotSpicyEnabled();
         }
 
         return CoupleResponse.builder()
@@ -75,6 +77,7 @@ public class CoupleService {
                 .partnerNickname(partnerNickname)
                 .startDate(startDate)
                 .notificationTime(notificationTime)
+                .isHotSpicyEnabled(isHotSpicyEnabled)
                 .build();
     }
 

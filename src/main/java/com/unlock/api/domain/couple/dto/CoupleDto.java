@@ -54,6 +54,9 @@ public class CoupleDto {
 
         @Schema(description = "현재 설정된 알림 시간", example = "21:00")
         private LocalTime notificationTime;
+
+        @Schema(description = "HOT_SPICY 모드 활성화 여부", example = "false")
+        private Boolean isHotSpicyEnabled;
     }
 
     @Getter
