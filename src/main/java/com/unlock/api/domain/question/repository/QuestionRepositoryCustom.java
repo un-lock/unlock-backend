@@ -1,6 +1,7 @@
 package com.unlock.api.domain.question.repository;
 
 import com.unlock.api.domain.question.entity.Question;
+import com.unlock.api.domain.question.entity.QuestionCategory;
 import java.util.Optional;
 
 /**
@@ -12,4 +13,9 @@ public interface QuestionRepositoryCustom {
      * 특정 커플이 아직 배정받지 않은 모든 질문들 중 랜덤하게 하나를 가져옵니다.
      */
     Optional<Question> findRandomQuestionNotAssignedToCouple(Long coupleId);
+
+    /**
+     * 특정 커플이 아직 배정받지 않은 질문들 중 지정된 카테고리에서 랜덤하게 하나를 가져옵니다.
+     */
+    Optional<Question> findRandomQuestionNotAssignedToCoupleByCategory(Long coupleId, QuestionCategory category);
 }

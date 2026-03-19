@@ -7,6 +7,7 @@ import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.question.dto.QuestionDto.QuestionResponse;
 import com.unlock.api.domain.question.entity.CoupleQuestion;
 import com.unlock.api.domain.question.entity.Question;
+import com.unlock.api.domain.question.entity.QuestionCategory;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
 import com.unlock.api.domain.question.repository.QuestionRepository;
 import com.unlock.api.domain.user.entity.User;
@@ -98,6 +99,27 @@ public class QuestionService {
         coupleQuestionRepository.save(newAssignment);
         log.info("[SCHEDULE] 커플(ID:{}) 새로운 질문 배정 완료: {}", couple.getId(), randomQuestion.getId());
         return randomQuestion;
+    }
+
+    /**
+     * 커플 첫 생성 시 SPICY 카테고리에서 질문 배정
+     */
+    public Question assignFirstQuestionToCouple(Couple couple) {
+        LocalDate today = LocalDate.now();
+
+        Question spicyQuestion = questionRepository.findRandomQuestionNotAssignedToCoupleByCategory(couple.getId(), QuestionCategory.SPICY)
+                .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
+
+        CoupleQuestion newAssignment = CoupleQuestion.builder()
+                .couple(couple)
+                .question(spicyQuestion)
+                .assignedDate(today)
+                .build();
+
+        coupleQuestionRepository.save(newAssignment);
+        log.info("[COUPLE_CREATED] 커플(ID:{}) 첫 SPICY 질문 배정 완료: {}", couple.getId(), spicyQuestion.getId());
+        return spicyQuestion;
     }
 
     /**

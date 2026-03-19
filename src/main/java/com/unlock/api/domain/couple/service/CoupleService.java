@@ -161,8 +161,8 @@ public class CoupleService {
         user.setCouple(couple);
         requester.setCouple(couple);
 
-        // 3. 커플 생성 즉시 오늘의 질문 배정
-        questionService.assignQuestionToCouple(couple);
+        // 3. 커플 생성 즉시 SPICY 카테고리에서 첫 질문 배정
+        questionService.assignFirstQuestionToCouple(couple);
 
         // 4. 처리 완료된 Redis 신청 정보 삭제
         redisService.deleteCoupleRequest(userId);
