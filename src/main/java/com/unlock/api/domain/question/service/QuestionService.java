@@ -93,13 +93,30 @@ public class QuestionService {
     }
 
     /**
-     * 커플 첫 생성 시 호출 — 사이클 초기화 후 첫 번째 질문 배정
+     * 커플 첫 생성 시 호출 — 첫 질문은 무조건 SPICY, 이후 사이클 초기화
+     * cycleDay=1로 설정하여 다음 스케줄러 호출부터 사이클 2일차부터 진행
      */
     public Question assignFirstQuestionToCouple(Couple couple) {
-        int sweetDay = ThreadLocalRandom.current().nextInt(1, 6); // 1~5 랜덤
+        // 첫 질문 무조건 SPICY
+        Question firstQuestion = questionRepository.findRandomQuestionNotAssignedToCoupleByCategory(couple.getId(), QuestionCategory.SPICY)
+                .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
+
+        CoupleQuestion newAssignment = CoupleQuestion.builder()
+                .couple(couple)
+                .question(firstQuestion)
+                .assignedDate(LocalDate.now())
+                .build();
+        coupleQuestionRepository.save(newAssignment);
+
+        // 사이클 초기화: cycleDay=1로 설정, sweetDay는 2~5 랜덤 (2일차부터 사이클 적용)
+        int sweetDay = ThreadLocalRandom.current().nextInt(2, 6);
         couple.initCycle(sweetDay);
-        log.info("[COUPLE_CREATED] 커플(ID:{}) 사이클 초기화 — sweetDay={}", couple.getId(), sweetDay);
-        return assignNextCycleQuestion(couple, LocalDate.now());
+        couple.advanceCycle(1, sweetDay);
+
+        log.info("[COUPLE_CREATED] 커플(ID:{}) 첫 SPICY 질문 배정 완료 — questionId={}, sweetDay={}",
+                couple.getId(), firstQuestion.getId(), sweetDay);
+        return firstQuestion;
     }
 
     /**
