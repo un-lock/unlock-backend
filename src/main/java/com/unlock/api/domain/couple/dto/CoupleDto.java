@@ -68,6 +68,16 @@ public class CoupleDto {
     }
 
     @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "HOT_SPICY 모드 설정 요청")
+    public static class HotSpicyRequest {
+        @NotNull(message = "isHotSpicyEnabled 값은 필수입니다.")
+        @Schema(description = "HOT_SPICY 카테고리 포함 여부", example = "true")
+        private Boolean isHotSpicyEnabled;
+    }
+
+    @Getter
     @Builder
     @Schema(description = "내가 보낸 연결 신청 정보")
     public static class SentCoupleRequestResponse {

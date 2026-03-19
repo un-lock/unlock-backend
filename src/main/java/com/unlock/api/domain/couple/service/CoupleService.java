@@ -95,6 +95,22 @@ public class CoupleService {
     }
 
     /**
+     * HOT_SPICY 모드 활성화/비활성화
+     */
+    public void updateHotSpicyEnabled(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateHotSpicyEnabled(enabled);
+        log.info("[UPDATE] 커플(ID:{}) HOT_SPICY 모드 변경 -> {}", couple.getId(), enabled);
+    }
+
+    /**
      * 커플 연결 신청
      * 초대 코드를 통해 상대방에게 연결을 요청하며, 정보는 Redis에 24시간 동안 유지됩니다.
      * 
