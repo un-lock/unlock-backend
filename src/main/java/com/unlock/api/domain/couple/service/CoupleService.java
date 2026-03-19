@@ -13,6 +13,7 @@ import com.unlock.api.domain.couple.dto.CoupleDto.SentCoupleRequestResponse;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.couple.repository.CoupleRepository;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
+import com.unlock.api.domain.question.service.QuestionService;
 import com.unlock.api.domain.user.entity.User;
 import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class CoupleService {
     private final AnswerRepository answerRepository;
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
+    private final QuestionService questionService;
     private final FcmService fcmService;
 
     /**
@@ -159,7 +161,10 @@ public class CoupleService {
         user.setCouple(couple);
         requester.setCouple(couple);
 
-        // 3. 처리 완료된 Redis 신청 정보 삭제
+        // 3. 커플 생성 즉시 오늘의 질문 배정
+        questionService.assignQuestionToCouple(couple);
+
+        // 4. 처리 완료된 Redis 신청 정보 삭제
         redisService.deleteCoupleRequest(userId);
 
         // [Push Notification] 신청자에게 연결 완료 알림 발송
