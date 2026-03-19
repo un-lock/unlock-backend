@@ -10,6 +10,7 @@ import com.unlock.api.domain.question.entity.QuestionCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -58,6 +59,26 @@ public class QuestionRepositoryImpl implements QuestionRepositoryCustom {
                 .selectFrom(question)
                 .where(question.id.notIn(assignedQuestionIds)
                         .and(question.category.eq(category)))
+                .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
+                .fetchFirst();
+
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Optional<Question> findRandomQuestionNotAssignedToCoupleByCategories(Long coupleId, List<QuestionCategory> categories) {
+        QQuestion question = QQuestion.question;
+        QCoupleQuestion coupleQuestion = QCoupleQuestion.coupleQuestion;
+
+        var assignedQuestionIds = JPAExpressions
+                .select(coupleQuestion.question.id)
+                .from(coupleQuestion)
+                .where(coupleQuestion.couple.id.eq(coupleId));
+
+        Question result = queryFactory
+                .selectFrom(question)
+                .where(question.id.notIn(assignedQuestionIds)
+                        .and(question.category.in(categories)))
                 .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
                 .fetchFirst();
 

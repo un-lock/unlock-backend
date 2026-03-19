@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 질문 조회 및 랜덤 배정 로직 담당 서비스
@@ -59,8 +61,8 @@ public class QuestionService {
     /**
      * 커플에게 질문 배정 (스케줄러 전용)
      * 1. 이미 오늘 배정된 질문이 있다면 반환 (중복 방지)
-     * 2. 마지막 질문이 미완료라면 오늘 날짜로 이월 (Carry-over)
-     * 3. 이월할 질문이 없다면 새로운 질문 배정
+     * 2. 마지막 질문이 미완료라면 오늘 날짜로 이월 (Carry-over) — 사이클 진행 없음
+     * 3. 이월할 질문이 없다면 5일 사이클에 따라 새로운 질문 배정
      */
     public Question assignQuestionToCouple(Couple couple) {
         LocalDate today = LocalDate.now();
@@ -71,9 +73,9 @@ public class QuestionService {
             return todayRecord.get().getQuestion();
         }
 
-        // 2. [질문 이월 로직]: 마지막 질문이 미완료 상태라면 날짜만 오늘로 갱신
+        // 2. [질문 이월 로직]: 마지막 질문이 미완료 상태라면 날짜만 오늘로 갱신 (사이클 유지)
         Optional<CoupleQuestion> lastRecordOpt = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple);
-        
+
         if (lastRecordOpt.isPresent()) {
             CoupleQuestion last = lastRecordOpt.get();
             boolean user1Finished = answerRepository.existsByUserAndQuestion(couple.getUser1(), last.getQuestion());
@@ -86,40 +88,66 @@ public class QuestionService {
             }
         }
 
-        // 3. [신규 배정]: 이월할 질문이 없다면 새로운 질문 랜덤 추출
-        Question randomQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
-
-        CoupleQuestion newAssignment = CoupleQuestion.builder()
-                .couple(couple)
-                .question(randomQuestion)
-                .assignedDate(today)
-                .build();
-        
-        coupleQuestionRepository.save(newAssignment);
-        log.info("[SCHEDULE] 커플(ID:{}) 새로운 질문 배정 완료: {}", couple.getId(), randomQuestion.getId());
-        return randomQuestion;
+        // 3. [신규 배정]: 5일 사이클 기반으로 카테고리 결정 후 질문 추출
+        return assignNextCycleQuestion(couple, today);
     }
 
     /**
-     * 커플 첫 생성 시 SPICY 카테고리에서 질문 배정
+     * 커플 첫 생성 시 호출 — 사이클 초기화 후 첫 번째 질문 배정
      */
     public Question assignFirstQuestionToCouple(Couple couple) {
-        LocalDate today = LocalDate.now();
+        int sweetDay = ThreadLocalRandom.current().nextInt(1, 6); // 1~5 랜덤
+        couple.initCycle(sweetDay);
+        log.info("[COUPLE_CREATED] 커플(ID:{}) 사이클 초기화 — sweetDay={}", couple.getId(), sweetDay);
+        return assignNextCycleQuestion(couple, LocalDate.now());
+    }
 
-        Question spicyQuestion = questionRepository.findRandomQuestionNotAssignedToCoupleByCategory(couple.getId(), QuestionCategory.SPICY)
-                .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
-                        .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
+    /**
+     * 5일 사이클에 따라 카테고리를 결정하고 질문을 배정합니다.
+     * - cycleDay가 sweetDay와 일치하면 SWEET
+     * - 나머지 4일은 SPICY (isHotSpicyEnabled=true면 SPICY+HOT_SPICY 통합 풀)
+     * - 사이클 day 5 완료 시 다음 사이클의 sweetDay 재추첨
+     */
+    private Question assignNextCycleQuestion(Couple couple, LocalDate date) {
+        int nextDay = (couple.getQuestionCycleDay() % 5) + 1; // 0→1, 1→2, ..., 5→1
+        boolean isSweet = nextDay == couple.getQuestionSweetDay();
+
+        Question question = pickQuestion(couple, isSweet);
 
         CoupleQuestion newAssignment = CoupleQuestion.builder()
                 .couple(couple)
-                .question(spicyQuestion)
-                .assignedDate(today)
+                .question(question)
+                .assignedDate(date)
                 .build();
-
         coupleQuestionRepository.save(newAssignment);
-        log.info("[COUPLE_CREATED] 커플(ID:{}) 첫 SPICY 질문 배정 완료: {}", couple.getId(), spicyQuestion.getId());
-        return spicyQuestion;
+
+        int currentSweetDay = couple.getQuestionSweetDay();
+        int newSweetDay = (nextDay == 5) ? ThreadLocalRandom.current().nextInt(1, 6) : currentSweetDay;
+        couple.advanceCycle(nextDay, newSweetDay);
+
+        log.info("[SCHEDULE] 커플(ID:{}) 사이클 day={}/{} 질문 배정 — category={}, questionId={}",
+                couple.getId(), nextDay, currentSweetDay, question.getCategory(), question.getId());
+        return question;
+    }
+
+    /**
+     * isSweet 여부와 isHotSpicyEnabled에 따라 적절한 카테고리 풀에서 질문을 추출합니다.
+     */
+    private Question pickQuestion(Couple couple, boolean isSweet) {
+        if (isSweet) {
+            return questionRepository.findRandomQuestionNotAssignedToCoupleByCategory(couple.getId(), QuestionCategory.SWEET)
+                    .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
+        }
+        if (couple.isHotSpicyEnabled()) {
+            return questionRepository.findRandomQuestionNotAssignedToCoupleByCategories(
+                            couple.getId(), List.of(QuestionCategory.SPICY, QuestionCategory.HOT_SPICY))
+                    .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
+        }
+        return questionRepository.findRandomQuestionNotAssignedToCoupleByCategory(couple.getId(), QuestionCategory.SPICY)
+                .orElseGet(() -> questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND)));
     }
 
     /**
