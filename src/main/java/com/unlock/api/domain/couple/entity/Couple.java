@@ -66,12 +66,19 @@ public class Couple extends BaseTimeEntity {
     @Column(nullable = false)
     private int questionSweetDay = 1; // 현재 사이클에서 SWEET 질문이 배정될 일차 (1~5)
 
+    @Column(nullable = true)
+    private LocalDate anniversaryDate; // 실제 사귄 날짜 (유저가 직접 입력, null 허용)
+
     public void updateNotificationTime(LocalTime newTime) {
         this.notificationTime = newTime;
     }
 
     public void updateHotSpicyEnabled(boolean enabled) {
         this.isHotSpicyEnabled = enabled;
+    }
+
+    public void updateAnniversaryDate(LocalDate anniversaryDate) {
+        this.anniversaryDate = anniversaryDate;
     }
 
     /**

@@ -7,6 +7,7 @@ import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.NotificationTimeRequest;
 import com.unlock.api.domain.couple.dto.CoupleDto.HotSpicyRequest;
+import com.unlock.api.domain.couple.dto.CoupleDto.AnniversaryDateRequest;
 import com.unlock.api.domain.couple.dto.CoupleDto.SentCoupleRequestResponse;
 import com.unlock.api.domain.couple.service.CoupleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -103,6 +104,16 @@ public class CoupleController {
     public ApiCommonResponse<Void> rejectConnection(@Parameter(hidden = true) @CurrentUser Long userId) {
         coupleService.rejectConnection(userId);
         return ApiCommonResponse.success("연결 신청을 거절했습니다.", null);
+    }
+
+    @Operation(summary = "사귄 날짜 설정", description = "커플의 실제 사귄 날짜를 저장합니다.")
+    @ApiResponse(responseCode = "200", description = "설정 성공")
+    @PatchMapping("/anniversary-date")
+    public ApiCommonResponse<Void> updateAnniversaryDate(
+            @Parameter(hidden = true) @CurrentUser Long userId,
+            @RequestBody @Valid AnniversaryDateRequest request) {
+        coupleService.updateAnniversaryDate(userId, request.getAnniversaryDate());
+        return ApiCommonResponse.success("사귄 날짜가 저장되었습니다.", null);
     }
 
     @Operation(summary = "HOT_SPICY 모드 설정", description = "활성화 시 다음 질문부터 SPICY+HOT_SPICY 통합 풀에서 배정됩니다.")

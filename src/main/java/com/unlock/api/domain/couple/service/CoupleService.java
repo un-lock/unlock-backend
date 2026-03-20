@@ -61,6 +61,7 @@ public class CoupleService {
         LocalDate startDate = null;
         LocalTime notificationTime = null;
         Boolean isHotSpicyEnabled = null;
+        LocalDate anniversaryDate = null;
 
         if (isConnected) {
             Couple couple = user.getCouple();
@@ -69,6 +70,7 @@ public class CoupleService {
             startDate = couple.getStartDate();
             notificationTime = couple.getNotificationTime();
             isHotSpicyEnabled = couple.isHotSpicyEnabled();
+            anniversaryDate = couple.getAnniversaryDate();
         }
 
         return CoupleResponse.builder()
@@ -78,6 +80,7 @@ public class CoupleService {
                 .startDate(startDate)
                 .notificationTime(notificationTime)
                 .isHotSpicyEnabled(isHotSpicyEnabled)
+                .anniversaryDate(anniversaryDate)
                 .build();
     }
 
@@ -95,6 +98,22 @@ public class CoupleService {
 
         couple.updateNotificationTime(notificationTime);
         log.info("[UPDATE] 커플(ID:{}) 알림 시간 변경 -> {}", couple.getId(), notificationTime);
+    }
+
+    /**
+     * 사귄 날짜 설정
+     */
+    public void updateAnniversaryDate(Long userId, java.time.LocalDate anniversaryDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateAnniversaryDate(anniversaryDate);
+        log.info("[UPDATE] 커플(ID:{}) 사귄 날짜 변경 -> {}", couple.getId(), anniversaryDate);
     }
 
     /**

@@ -57,6 +57,19 @@ public class CoupleDto {
 
         @Schema(description = "HOT_SPICY 모드 활성화 여부", example = "false")
         private Boolean isHotSpicyEnabled;
+
+        @Schema(description = "실제 사귄 날짜 (유저가 설정한 값, 미설정 시 null)", example = "2025-12-25")
+        private LocalDate anniversaryDate;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "사귄 날짜 설정 요청")
+    public static class AnniversaryDateRequest {
+        @NotNull(message = "사귄 날짜는 필수입니다.")
+        @Schema(description = "실제 사귄 날짜", example = "2025-12-25")
+        private LocalDate anniversaryDate;
     }
 
     @Getter
