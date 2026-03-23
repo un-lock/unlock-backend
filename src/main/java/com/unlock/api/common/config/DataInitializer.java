@@ -25,7 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         // 질문 데이터가 없을 경우에만 초기 데이터 삽입
         if (questionRepository.count() == 0) {
-            log.info("초기 질문 데이터 생성을 시작합니다...");
+            log.debug("초기 질문 데이터 생성을 시작합니다...");
             
             List<Question> initialQuestions = Arrays.asList(
                 createQuestion("상대방의 신체 부위 중 가장 매력적이라고 느끼는 곳은 어디야?", QuestionCategory.SPICY),
@@ -34,7 +34,7 @@ public class DataInitializer implements CommandLineRunner {
             );
 
             questionRepository.saveAll(initialQuestions);
-            log.info("{}개의 초기 질문 데이터가 생성되었습니다.", initialQuestions.size());
+            log.debug("{}개의 초기 질문 데이터가 생성되었습니다.", initialQuestions.size());
         }
     }
 

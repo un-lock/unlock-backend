@@ -59,7 +59,7 @@ public class EmailService {
         
         message.setText(content);
         mailSender.send(message);
-        log.info("임시 비밀번호 발송 성공: {}", email);
+        log.debug("임시 비밀번호 발송 성공: {}", email);
     }
 
     /**
@@ -100,7 +100,7 @@ public class EmailService {
             
             message.setText(content);
             mailSender.send(message);
-            log.info("인증 이메일 발송 성공: {}", email);
+            log.debug("인증 이메일 발송 성공: {}", email);
         } catch (Exception e) {
             log.error("인증 이메일 발송 실패: ", e);
             redisService.deleteVerificationCode(email);

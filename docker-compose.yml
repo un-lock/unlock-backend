@@ -46,6 +46,8 @@ services:
       - APPLE_PRIVATE_KEY=${APPLE_PRIVATE_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - LOG_LEVEL_ROOT=${LOG_LEVEL_ROOT:-WARN}
+      - LOG_LEVEL_APP=${LOG_LEVEL_APP:-INFO}
       - TZ=Asia/Seoul
     volumes:
       - ~/logs/unlock-app/${ENV:-dev}:/logs

@@ -97,7 +97,7 @@ public class CoupleService {
         }
 
         couple.updateNotificationTime(notificationTime);
-        log.info("[UPDATE] 커플(ID:{}) 알림 시간 변경 -> {}", couple.getId(), notificationTime);
+        log.debug("[UPDATE] 커플(ID:{}) 알림 시간 변경 -> {}", couple.getId(), notificationTime);
     }
 
     /**
@@ -113,7 +113,7 @@ public class CoupleService {
         }
 
         couple.updateAnniversaryDate(anniversaryDate);
-        log.info("[UPDATE] 커플(ID:{}) 사귄 날짜 변경 -> {}", couple.getId(), anniversaryDate);
+        log.debug("[UPDATE] 커플(ID:{}) 사귄 날짜 변경 -> {}", couple.getId(), anniversaryDate);
     }
 
     /**
@@ -129,7 +129,7 @@ public class CoupleService {
         }
 
         couple.updateHotSpicyEnabled(enabled);
-        log.info("[UPDATE] 커플(ID:{}) HOT_SPICY 모드 변경 -> {}", couple.getId(), enabled);
+        log.debug("[UPDATE] 커플(ID:{}) HOT_SPICY 모드 변경 -> {}", couple.getId(), enabled);
     }
 
     /**
