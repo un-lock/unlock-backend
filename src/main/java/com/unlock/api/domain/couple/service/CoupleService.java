@@ -4,12 +4,16 @@ import com.unlock.api.common.exception.BusinessException;
 import com.unlock.api.common.exception.ErrorCode;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleRequestResponse;
 import com.unlock.api.domain.couple.dto.CoupleDto.CoupleResponse;
+import com.unlock.api.domain.couple.dto.CoupleDto.SentCoupleRequestResponse;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.couple.repository.CoupleRepository;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
+import com.unlock.api.domain.question.service.QuestionService;
 import com.unlock.api.domain.user.entity.User;
 import com.unlock.api.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,16 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 /**
  * 커플 매칭 및 관계 관리 비즈니스 로직 서비스
- * 
- * 주요 기능:
- * - 초대 코드 생성 및 조회
- * - 커플 연결 신청 (Redis 기반 대기열)
- * - 신청 수락/거절 및 커플 생성
- * - 커플 해제 및 관련 데이터 전수 파기 (Privacy First)
  */
 @Slf4j
 @Service
@@ -41,13 +40,11 @@ public class CoupleService {
     private final AnswerRepository answerRepository;
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
+    private final QuestionService questionService;
+    private final FcmService fcmService;
 
     /**
      * 내 커플 정보 및 초대 코드 조회
-     * 유저에게 초대 코드가 없는 경우 최초 1회 생성하여 저장합니다.
-     * 
-     * @param userId 현재 로그인한 유저 ID
-     * @return 초대 코드, 연결 여부, 파트너 닉네임 등을 포함한 응답 객체
      */
     @Transactional(readOnly = true)
     public CoupleResponse getCoupleInfo(Long userId) {
@@ -56,19 +53,24 @@ public class CoupleService {
 
         // 초대 코드가 없는 신규 유저에게 코드 부여
         if (user.getInviteCode() == null) {
-            user.setInviteCode(generateInviteCode());
+            user.updateInviteCode(generateInviteCode());
         }
 
         boolean isConnected = user.getCouple() != null;
         String partnerNickname = null;
         LocalDate startDate = null;
+        LocalTime notificationTime = null;
+        Boolean isHotSpicyEnabled = null;
+        LocalDate anniversaryDate = null;
 
         if (isConnected) {
             Couple couple = user.getCouple();
-            // 두 유저 중 내가 아닌 다른 한 명(파트너)을 식별
             User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
             partnerNickname = partner.getNickname();
             startDate = couple.getStartDate();
+            notificationTime = couple.getNotificationTime();
+            isHotSpicyEnabled = couple.isHotSpicyEnabled();
+            anniversaryDate = couple.getAnniversaryDate();
         }
 
         return CoupleResponse.builder()
@@ -76,7 +78,58 @@ public class CoupleService {
                 .isConnected(isConnected)
                 .partnerNickname(partnerNickname)
                 .startDate(startDate)
+                .notificationTime(notificationTime)
+                .isHotSpicyEnabled(isHotSpicyEnabled)
+                .anniversaryDate(anniversaryDate)
                 .build();
+    }
+
+    /**
+     * 커플 알림 시간 변경
+     */
+    public void updateNotificationTime(Long userId, LocalTime notificationTime) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateNotificationTime(notificationTime);
+        log.info("[UPDATE] 커플(ID:{}) 알림 시간 변경 -> {}", couple.getId(), notificationTime);
+    }
+
+    /**
+     * 사귄 날짜 설정
+     */
+    public void updateAnniversaryDate(Long userId, java.time.LocalDate anniversaryDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateAnniversaryDate(anniversaryDate);
+        log.info("[UPDATE] 커플(ID:{}) 사귄 날짜 변경 -> {}", couple.getId(), anniversaryDate);
+    }
+
+    /**
+     * HOT_SPICY 모드 활성화/비활성화
+     */
+    public void updateHotSpicyEnabled(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) {
+            throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+        }
+
+        couple.updateHotSpicyEnabled(enabled);
+        log.info("[UPDATE] 커플(ID:{}) HOT_SPICY 모드 변경 -> {}", couple.getId(), enabled);
     }
 
     /**
@@ -116,7 +169,8 @@ public class CoupleService {
         // Redis에 신청 정보 저장 (키: "CP_REQ:상대ID", 값: "내ID")
         redisService.saveCoupleRequest(target.getId(), userId);
         
-        // TODO: [Push Notification] target 유저에게 "A님으로부터 커플 연결 신청이 왔습니다! 💌" 알림 발송
+        // [Push Notification] 상대방에게 연결 신청 알림 발송
+        fcmService.sendToUser(target, "un:lock 💌", requester.getNickname() + "님으로부터 커플 연결 신청이 왔습니다!", NotificationType.COUPLE_REQUEST);
     }
 
     /**
@@ -145,10 +199,14 @@ public class CoupleService {
         user.setCouple(couple);
         requester.setCouple(couple);
 
-        // 3. 처리 완료된 Redis 신청 정보 삭제
+        // 3. 커플 생성 즉시 SPICY 카테고리에서 첫 질문 배정
+        questionService.assignFirstQuestionToCouple(couple);
+
+        // 4. 처리 완료된 Redis 신청 정보 삭제
         redisService.deleteCoupleRequest(userId);
 
-        // TODO: [Push Notification] requester 유저에게 "신청을 수락하여 커플 연결이 완료되었습니다! 💕" 알림 발송
+        // [Push Notification] 신청자에게 연결 완료 알림 발송
+        fcmService.sendToUser(requester, "un:lock 💕", user.getNickname() + "님이 신청을 수락하여 커플 연결이 완료되었습니다!", NotificationType.COUPLE_CONNECTED);
     }
 
     /**
@@ -178,17 +236,18 @@ public class CoupleService {
 
         // 2. 유저 관계 초기화 및 신규 초대 코드 부여 (새 인연을 위해)
         user.setCouple(null);
-        user.setInviteCode(generateInviteCode());
+        user.updateInviteCode(generateInviteCode());
         
         partner.setCouple(null);
-        partner.setInviteCode(generateInviteCode());
+        partner.updateInviteCode(generateInviteCode());
 
         // 3. 커플 엔티티 삭제
         coupleRepository.delete(couple);
 
         log.info("[BREAKUP] 커플(ID:{})의 모든 기록이 성공적으로 삭제되었습니다.", couple.getId());
         
-        // TODO: [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
+        // [Push Notification] partner 유저에게 "커플 연결이 해제되어 모든 기록이 파기되었습니다. 💔" 알림 발송
+        fcmService.sendToUser(partner, "un:lock 💔", "커플 연결이 해제되어 모든 기록이 파기되었습니다.", NotificationType.COUPLE_DISCONNECTED);
     }
 
     /**
@@ -208,6 +267,37 @@ public class CoupleService {
     }
 
     /**
+     * 내가 보낸 연결 신청 취소
+     */
+    public void cancelSentRequest(Long userId) {
+        String targetIdStr = redisService.getSentCoupleRequest(userId);
+        if (targetIdStr == null) {
+            throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
+        }
+
+        User requester = userRepository.findById(userId).get();
+        User target = userRepository.findById(Long.parseLong(targetIdStr)).get();
+
+        redisService.deleteCoupleRequest(Long.parseLong(targetIdStr));
+
+        fcmService.sendToUser(target, "un:lock 💔", requester.getNickname() + "님이 커플 연결 신청을 취소했습니다.", NotificationType.COUPLE_REQUEST_CANCELLED);
+    }
+
+    /**
+     * 내가 보낸 연결 신청 정보 확인
+     */
+    @Transactional(readOnly = true)
+    public SentCoupleRequestResponse getSentRequest(Long userId) {
+        String targetIdStr = redisService.getSentCoupleRequest(userId);
+        if (targetIdStr == null) return null;
+
+        User target = userRepository.findById(Long.parseLong(targetIdStr)).get();
+        return SentCoupleRequestResponse.builder()
+                .targetNickname(target.getNickname())
+                .build();
+    }
+
+    /**
      * 연결 신청 거절
      */
     public void rejectConnection(Long userId) {
@@ -216,10 +306,14 @@ public class CoupleService {
             throw new BusinessException(ErrorCode.REQUEST_NOT_FOUND);
         }
         
-        // 신청 정보만 삭제
+        Long requesterId = Long.parseLong(requesterIdStr);
+        User user = userRepository.findById(userId).get();
+        User requester = userRepository.findById(requesterId).get();
+
         redisService.deleteCoupleRequest(userId);
 
-        // TODO: [Push Notification] requester 유저에게 "커플 연결 신청이 거절되었습니다. 😢" 알림 발송
+        // [Push Notification] 신청자에게 거절 알림 발송
+        fcmService.sendToUser(requester, "un:lock 😢", user.getNickname() + "님이 커플 연결 신청을 거절하였습니다.", NotificationType.COUPLE_REQUEST_REJECTED);
     }
 
     /**

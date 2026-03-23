@@ -35,7 +35,7 @@ public class ArchiveService {
 
     /**
      * 월별 아카이브 요약 목록 조회 (캘린더용)
-     * [최고 성능 최적화]: Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
+     * Querydsl DTO Projections를 사용하여 단 한 번의 조인 쿼리로 결과물 완성.
      */
     public List<ArchiveSummaryResponse> getMonthlyArchive(Long userId, int year, int month) {
         User user = userRepository.findById(userId)
@@ -47,7 +47,23 @@ public class ArchiveService {
         User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
 
         // [고도화]: 자바 루프 없이 DB에서 DTO 리스트를 한꺼번에 뽑아옵니다.
-        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), year, month);
+        return answerRepository.findMonthlyArchiveSummary(couple, userId, partner.getId(), couple.isSubscribed(), year, month);
+    }
+
+    /**
+     * 아카이브 리스트형 조회 (페이징 및 정렬 적용)
+     */
+    public List<ArchiveSummaryResponse> getArchiveList(Long userId, int page, int size, String sort) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Couple couple = user.getCouple();
+        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+
+        User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
+
+        // Querydsl을 통해 페이징 및 정렬이 적용된 리스트를 가져옵니다.
+        return answerRepository.findArchiveList(couple, userId, partner.getId(), couple.isSubscribed(), page, size, sort);
     }
 
     /**
@@ -84,6 +100,7 @@ public class ArchiveService {
                 .date(targetCq.getAssignedDate())
                 .myAnswer(myAnswer == null ? null : convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))
+                .isCoupleSubscribed(couple.isSubscribed())
                 .build();
     }
 

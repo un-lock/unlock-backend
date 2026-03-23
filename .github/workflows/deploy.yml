@@ -104,6 +104,9 @@ jobs:
             EOF
             fi
             
+            # [보안] FCM 비공개 키 파일 생성
+            echo '${{ secrets.FCM_KEY }}' > firebase-key.json
+            
             docker pull ${{ secrets.DOCKER_USERNAME }}/unlock-backend:$TAG
             
             # [강력 조치] 무조건 이미지를 새로 교체하도록 강제합니다.

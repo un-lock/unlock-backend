@@ -53,4 +53,51 @@ public class Couple extends BaseTimeEntity {
     @Builder.Default
     @Column(nullable = false)
     private boolean isSubscribed = false; // 프리미엄 구독 여부 (true인 경우 광고 없이 답변 열람 가능)
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isHotSpicyEnabled = false; // HOT_SPICY 카테고리 포함 여부 (프론트 버튼으로 토글)
+
+    @Builder.Default
+    @Column(nullable = false)
+    private int questionCycleDay = 0; // 마지막으로 배정된 사이클 내 일차 (0=초기값, 1~5)
+
+    @Builder.Default
+    @Column(nullable = false)
+    private int questionSweetDay = 1; // 현재 사이클에서 SWEET 질문이 배정될 일차 (1~5)
+
+    @Column(nullable = true)
+    private LocalDate anniversaryDate; // 실제 사귄 날짜 (유저가 직접 입력, null 허용)
+
+    public void updateNotificationTime(LocalTime newTime) {
+        this.notificationTime = newTime;
+    }
+
+    public void updateHotSpicyEnabled(boolean enabled) {
+        this.isHotSpicyEnabled = enabled;
+    }
+
+    public void updateAnniversaryDate(LocalDate anniversaryDate) {
+        this.anniversaryDate = anniversaryDate;
+    }
+
+    /**
+     * 사이클 초기화 (커플 첫 생성 시 호출)
+     * questionCycleDay=0, questionSweetDay=랜덤(1~5)
+     */
+    public void initCycle(int sweetDay) {
+        this.questionCycleDay = 0;
+        this.questionSweetDay = sweetDay;
+    }
+
+    /**
+     * 질문 배정 후 사이클 진행
+     * nextDay가 5이면 다음 사이클을 위해 sweetDay 재설정
+     */
+    public void advanceCycle(int nextDay, int newSweetDay) {
+        this.questionCycleDay = nextDay;
+        if (nextDay == 5) {
+            this.questionSweetDay = newSweetDay;
+        }
+    }
 }

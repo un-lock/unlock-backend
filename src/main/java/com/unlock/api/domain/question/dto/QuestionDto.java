@@ -25,6 +25,6 @@ public class QuestionDto {
         private QuestionCategory category;
 
         @Schema(description = "현재 사용자의 답변 완료 여부", example = "true")
-        private boolean isAnswered;
+        private Boolean isAnswered;
     }
 }

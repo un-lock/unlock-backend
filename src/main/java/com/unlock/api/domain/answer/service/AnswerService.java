@@ -10,6 +10,8 @@ import com.unlock.api.domain.answer.entity.Answer;
 import com.unlock.api.domain.answer.entity.AnswerReveal;
 import com.unlock.api.domain.answer.repository.AnswerRepository;
 import com.unlock.api.domain.answer.repository.AnswerRevealRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.question.entity.CoupleQuestion;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
@@ -19,14 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-
 /**
  * 답변 등록 및 열람 권한 관리 비즈니스 로직 서비스
- * 
- * 주요 정책:
- * - 상호성(Reciprocity): 내가 답변을 완료해야만 파트너의 상태를 확인할 수 있습니다.
- * - 수익화 연동: 파트너의 답변을 열람하려면 광고 시청 기록이 있거나 프리미엄 구독 상태여야 합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,11 +33,11 @@ public class AnswerService {
     private final AnswerRevealRepository answerRevealRepository;
     private final CoupleQuestionRepository coupleQuestionRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     /**
-     * 오늘의 답변 등록
-     * 1. 오늘 우리 커플에게 배정된 질문을 찾습니다.
-     * 2. 이미 답변을 남겼는지 확인 후 저장합니다.
+     * 답변 등록
+     * [고도화]: 날짜와 상관없이 가장 최근에 배정된(또는 이월된) 질문에 대해 답변을 등록합니다.
      */
     public void submitAnswer(Long userId, AnswerRequest request) {
         User user = userRepository.findById(userId)
@@ -50,8 +46,8 @@ public class AnswerService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        // 오늘 날짜로 배정(또는 이동)된 질문 조회
-        CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
+        // 가장 최근에 배정된 질문 조회 (날짜가 지났더라도 미완료라면 이 질문에 답해야 함)
+        CoupleQuestion coupleQuestion = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         // 중복 답변 방지
@@ -67,14 +63,14 @@ public class AnswerService {
 
         answerRepository.save(answer);
 
-        // TODO: [Push Notification] 파트너에게 "상대방이 답변을 완료했습니다! 확인하러 가볼까요? 🔓" 알림 발송
+        // [Push Notification] 파트너에게 알림 발송
+        User partner = couple.getUser1().getId().equals(userId) ? couple.getUser2() : couple.getUser1();
+        fcmService.sendToUser(partner, "un:lock 🔓", user.getNickname() + "님이 답변을 완료했습니다! 확인하러 가볼까요?", NotificationType.PARTNER_ANSWER);
     }
 
     /**
-     * 오늘의 답변 현황 조회 (나와 파트너)
-     * 파트너의 답변 내용은 열람 권한(광고/구독) 여부에 따라 마스킹 처리될 수 있습니다.
-     * 
-     * @return 나의 답변 상세와 파트너의 답변 요약(또는 상세) 정보를 담은 DTO
+     * 현재 활성화된 답변 현황 조회
+     * [고도화]: 가장 최근 배정된 질문을 기준으로 답변 상태를 조회합니다.
      */
     @Transactional(readOnly = true)
     public TodayAnswerResponse getTodayAnswers(Long userId) {
@@ -84,7 +80,8 @@ public class AnswerService {
         Couple couple = user.getCouple();
         if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
 
-        CoupleQuestion coupleQuestion = coupleQuestionRepository.findByCoupleAndAssignedDate(couple, LocalDate.now())
+        // 가장 최근 질문 조회
+        CoupleQuestion coupleQuestion = coupleQuestionRepository.findTopByCoupleOrderByAssignedDateDesc(couple)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         // 1. 내 답변 조회 (미작성 시 파트너 답변 조회를 차단하기 위해 예외 발생)
@@ -104,6 +101,7 @@ public class AnswerService {
         return TodayAnswerResponse.builder()
                 .myAnswer(convertToMyAnswerDto(myAnswer))
                 .partnerAnswer(convertToPartnerAnswerDto(partner, partnerAnswer, isRevealed))
+                .isCoupleSubscribed(couple.isSubscribed())
                 .build();
     }
 
@@ -111,37 +109,66 @@ public class AnswerService {
      * 파트너 답변 잠금 해제 (Unlock)
      * 광고 시청 완료 시 호출되며, 해당 답변에 대한 영구적인 열람 권한을 기록합니다.
      */
+    /**
+     * 파트너 답변 잠금 해제 - 프리미엄 전용 (직접 API 호출)
+     * 비구독자는 광고 시청(SSV)을 통해 unlockByAd()로만 해제 가능
+     */
     public void revealPartnerAnswer(Long userId, Long answerId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. 해제 대상 답변 존재 확인
+        Couple couple = user.getCouple();
+        if (couple == null) throw new BusinessException(ErrorCode.COUPLE_NOT_FOUND);
+
+        // 프리미엄 구독자만 직접 호출 가능
+        if (!couple.isSubscribed()) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        saveReveal(user, answerId);
+    }
+
+    /**
+     * 파트너 답변 잠금 해제 - 광고 시청(SSV) 전용
+     * AdmobSsvService에서만 호출. 프리미엄 체크 없음.
+     * @return unlock된 답변의 questionId
+     */
+    public Long unlockByAd(Long userId, Long answerId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return saveReveal(user, answerId);
+    }
+
+    /**
+     * 공통 unlock 처리 (검증 + 저장)
+     * @return unlock된 답변의 questionId
+     */
+    private Long saveReveal(User user, Long answerId) {
         Answer targetAnswer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ANSWER_NOT_FOUND));
 
-        // 2. 보안 검증: 본인 답변은 해제 불필요
-        if (targetAnswer.getUser().getId().equals(userId)) {
+        if (targetAnswer.getUser().getId().equals(user.getId())) {
             throw new BusinessException("자신의 답변은 해제할 필요가 없습니다.", ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 3. 보안 검증: 실제 내 파트너의 답변이 맞는지 확인
         Couple couple = user.getCouple();
         if (couple == null || !targetAnswer.getUser().getCouple().getId().equals(couple.getId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
-        // 4. 비즈니스 검증: 상대방이 답변을 실제로 완료했는지 확인
         if (targetAnswer.getContent() == null || targetAnswer.getContent().isBlank()) {
             throw new BusinessException(ErrorCode.PARTNER_NOT_ANSWERED);
         }
 
-        // 5. 열람 기록 저장 (중복 기록 방지)
         if (!answerRevealRepository.existsByUserAndAnswer(user, targetAnswer)) {
             answerRevealRepository.save(AnswerReveal.builder()
                     .user(user)
                     .answer(targetAnswer)
                     .build());
         }
+
+        return targetAnswer.getQuestion().getId();
     }
 
     /**

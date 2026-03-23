@@ -30,9 +30,12 @@ public class AnswerDto {
     public static class TodayAnswerResponse {
         @Schema(description = "나의 답변 정보")
         private MyAnswerDto myAnswer;
-        
+
         @Schema(description = "상대방의 답변 정보")
         private PartnerAnswerDto partnerAnswer;
+
+        @Schema(description = "커플 프리미엄 구독 여부 (true면 광고 없이 바로 열람 가능)", example = "false")
+        private Boolean isCoupleSubscribed;
     }
 
     @Getter
@@ -63,10 +66,10 @@ public class AnswerDto {
         private String content;
 
         @Schema(description = "상대방 작성 여부", example = "true")
-        private boolean isWritten;
+        private Boolean isWritten;
 
         @Schema(description = "내가 답변을 볼 수 있는 권한 여부", example = "false")
-        private boolean isRevealed;
+        private Boolean isRevealed;
 
         @Schema(description = "작성 시각", example = "2026-02-06T15:00:00")
         private LocalDateTime createdAt;

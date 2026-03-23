@@ -2,8 +2,10 @@ package com.unlock.api.domain.answer.dto;
 
 import com.unlock.api.domain.question.entity.QuestionCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
@@ -14,6 +16,8 @@ public class ArchiveDto {
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "아카이브 월별 요약 정보")
     public static class ArchiveSummaryResponse {
         @Schema(description = "질문 고유 ID", example = "10")
@@ -26,14 +30,19 @@ public class ArchiveDto {
         private LocalDate date;
 
         @Schema(description = "나의 답변 여부", example = "true")
-        private boolean myAnswered;
+        private Boolean myAnswered; // Querydsl BooleanExpression 결과에 맞춰 Boolean으로 설정
 
         @Schema(description = "파트너의 답변 여부", example = "true")
-        private boolean partnerAnswered;
+        private Boolean partnerAnswered;
+
+        @Schema(description = "파트너 답변 열람 가능 여부 (구독 중이거나 광고 시청 완료)", example = "true")
+        private Boolean isRevealed;
     }
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "아카이브 상세 정보 (질문 및 두 사람의 답변)")
     public static class ArchiveDetailResponse {
         @Schema(description = "질문 내용", example = "우리가 싸웠을 때, 내가 어떻게 화해를 청하면 기분이 풀릴 것 같아?")
@@ -50,5 +59,8 @@ public class ArchiveDto {
 
         @Schema(description = "파트너의 답변 정보")
         private AnswerDto.PartnerAnswerDto partnerAnswer;
+
+        @Schema(description = "커플 프리미엄 구독 여부", example = "false")
+        private Boolean isCoupleSubscribed;
     }
 }

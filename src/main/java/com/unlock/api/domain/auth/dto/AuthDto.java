@@ -74,6 +74,41 @@ public class AuthDto {
         @NotBlank(message = "비밀번호는 필수 입력 항목입니다.")
         @Schema(description = "비밀번호", example = "password123!")
         private String password;
+
+        @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
+        private String fcmToken;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "비밀번호 찾기(인증번호 요청) 객체")
+    public static class PasswordFindRequest {
+        @Email @NotBlank
+        @Schema(description = "가입한 이메일 주소", example = "couple@example.com")
+        private String email;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "임시 비밀번호 발급 요청 객체")
+    public static class PasswordResetRequest {
+        @Email @NotBlank
+        private String email;
+        
+        @NotBlank
+        @Schema(description = "이메일로 발송된 인증번호", example = "123456")
+        private String code;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "로그아웃 요청 객체")
+    public static class LogoutRequest {
+        @Schema(description = "로그아웃할 기기의 FCM 토큰", example = "fcm_token_sample_xyz")
+        private String fcmToken;
     }
 
     @Getter
@@ -91,9 +126,16 @@ public class AuthDto {
     @AllArgsConstructor
     @Schema(description = "소셜 로그인 요청 객체")
     public static class SocialLoginRequest {
-        @NotBlank(message = "토큰은 필수입니다.")
-        @Schema(description = "소셜 플랫폼(Kakao 등)에서 발급받은 AccessToken")
+        @NotBlank(message = "소셜 토큰은 필수입니다.")
+        @Schema(description = "소셜 플랫폼(Kakao, Google, Apple 등)에서 발급받은 인증 토큰(Access Token 또는 ID Token)",
+                example = "CzZqD5Jvk0F2gZjthVKMtaK4BW1qeMzrAAAAAQoXBi4AAAGc4IuLdwGXonZVdqHq")
         private String token;
+
+        @Schema(description = "FCM 기기 토큰 (알림용)", example = "fcm_token_sample_xyz")
+        private String fcmToken;
+
+        @Schema(description = "[Apple 전용] 앱에서 발급받은 authorizationCode (탈퇴 시 연동 해제에 사용)", example = "c1a2b3c4d5...")
+        private String authorizationCode;
     }
 
     @Getter
@@ -101,13 +143,13 @@ public class AuthDto {
     @AllArgsConstructor
     @Schema(description = "로그인 성공 응답 객체")
     public static class TokenResponse {
-        @Schema(description = "서비스 전용 AccessToken (Bearer 헤더에 사용)")
+        @Schema(description = "서비스 전용 AccessToken")
         private String accessToken;
         
         @Schema(description = "사용자 닉네임", example = "달콤한연인")
         private String nickname;
         
         @Schema(description = "커플 연결 여부", example = "false")
-        private boolean isCoupleConnected;
+        private Boolean isCoupleConnected;
     }
 }

@@ -2,12 +2,14 @@ package com.unlock.api.domain.couple.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * 커플 관련 데이터 전송 객체
@@ -25,6 +27,16 @@ public class CoupleDto {
     }
 
     @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "알림 시간 변경 요청")
+    public static class NotificationTimeRequest {
+        @NotNull(message = "알림 시간은 필수입니다.")
+        @Schema(description = "변경할 알림 시간 (HH:mm)", example = "22:00")
+        private LocalTime notificationTime;
+    }
+
+    @Getter
     @Builder
     @Schema(description = "내 커플 정보 응답")
     public static class CoupleResponse {
@@ -32,13 +44,32 @@ public class CoupleDto {
         private String inviteCode;
 
         @Schema(description = "커플 연결 여부", example = "true")
-        private boolean isConnected;
+        private Boolean isConnected;
 
         @Schema(description = "상대방 닉네임 (연결 안된 경우 null)", example = "달콤한연인")
         private String partnerNickname;
 
         @Schema(description = "커플 시작일 (연결 안된 경우 null)", example = "2026-02-06")
         private LocalDate startDate;
+
+        @Schema(description = "현재 설정된 알림 시간", example = "21:00")
+        private LocalTime notificationTime;
+
+        @Schema(description = "HOT_SPICY 모드 활성화 여부", example = "false")
+        private Boolean isHotSpicyEnabled;
+
+        @Schema(description = "실제 사귄 날짜 (유저가 설정한 값, 미설정 시 null)", example = "2025-12-25")
+        private LocalDate anniversaryDate;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "사귄 날짜 설정 요청")
+    public static class AnniversaryDateRequest {
+        @NotNull(message = "사귄 날짜는 필수입니다.")
+        @Schema(description = "실제 사귄 날짜", example = "2025-12-25")
+        private LocalDate anniversaryDate;
     }
 
     @Getter
@@ -50,5 +81,23 @@ public class CoupleDto {
 
         @Schema(description = "신청자 닉네임", example = "설레는시작")
         private String requesterNickname;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "HOT_SPICY 모드 설정 요청")
+    public static class HotSpicyRequest {
+        @NotNull(message = "isHotSpicyEnabled 값은 필수입니다.")
+        @Schema(description = "HOT_SPICY 카테고리 포함 여부", example = "true")
+        private Boolean isHotSpicyEnabled;
+    }
+
+    @Getter
+    @Builder
+    @Schema(description = "내가 보낸 연결 신청 정보")
+    public static class SentCoupleRequestResponse {
+        @Schema(description = "신청 받은 상대방 닉네임", example = "두근두근")
+        private String targetNickname;
     }
 }

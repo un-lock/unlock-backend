@@ -76,27 +76,52 @@ public class RedisService {
 
     /**
      * 커플 연결 신청 저장 (24시간 유효)
+     * - CP_REQ:{받는사람ID} = {보낸사람ID}  → 받는 사람이 신청 확인용
+     * - CP_REQ_SENT:{보낸사람ID} = {받는사람ID}  → 보낸 사람이 신청 현황 확인용
      */
     public void saveCoupleRequest(Long targetUserId, Long requesterId) {
-        redisTemplate.opsForValue().set(
-                "CP_REQ:" + targetUserId,
-                requesterId.toString(),
-                24,
-                TimeUnit.HOURS
-        );
+        redisTemplate.opsForValue().set("CP_REQ:" + targetUserId, requesterId.toString(), 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set("CP_REQ_SENT:" + requesterId, targetUserId.toString(), 24, TimeUnit.HOURS);
     }
 
     /**
-     * 커플 연결 신청 조회
+     * 나에게 온 커플 연결 신청 조회
      */
     public String getCoupleRequest(Long targetUserId) {
         return redisTemplate.opsForValue().get("CP_REQ:" + targetUserId);
     }
 
     /**
-     * 커플 연결 신청 삭제 (수락/거절 시)
+     * 내가 보낸 커플 연결 신청 조회
+     */
+    public String getSentCoupleRequest(Long requesterId) {
+        return redisTemplate.opsForValue().get("CP_REQ_SENT:" + requesterId);
+    }
+
+    /**
+     * 커플 연결 신청 삭제 (수락/거절 시) — 양방향 키 모두 삭제
      */
     public void deleteCoupleRequest(Long targetUserId) {
+        String requesterIdStr = redisTemplate.opsForValue().get("CP_REQ:" + targetUserId);
         redisTemplate.delete("CP_REQ:" + targetUserId);
+        if (requesterIdStr != null) {
+            redisTemplate.delete("CP_REQ_SENT:" + requesterIdStr);
+        }
+    }
+
+    /**
+     * AdMob SSV transaction_id 중복 처리 여부 확인
+     * Google이 네트워크 오류로 동일한 콜백을 여러 번 보낼 수 있어 중복 방지 필요
+     * @return 이미 처리된 경우 true
+     */
+    public boolean isAdmobTransactionProcessed(String transactionId) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey("ADMOB_TX:" + transactionId));
+    }
+
+    /**
+     * AdMob SSV transaction_id 처리 완료 기록 (7일 보관)
+     */
+    public void markAdmobTransactionProcessed(String transactionId) {
+        redisTemplate.opsForValue().set("ADMOB_TX:" + transactionId, "1", 7, TimeUnit.DAYS);
     }
 }

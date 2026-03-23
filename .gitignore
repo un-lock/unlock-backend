@@ -27,6 +27,7 @@ out/
 .env
 .env.*
 *.env
+firebase-key.json
 
 # Local logs
 logs/
@@ -34,3 +35,7 @@ logs/
 
 # Mac OS files
 .DS_Store
+
+# Claude Code
+.claude/
+CLAUDE.md

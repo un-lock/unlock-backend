@@ -1,13 +1,13 @@
 package com.unlock.api.domain.question.service;
 
 import com.unlock.api.domain.answer.repository.AnswerRepository;
+import com.unlock.api.domain.auth.entity.NotificationType;
+import com.unlock.api.domain.auth.service.FcmService;
 import com.unlock.api.domain.auth.service.RedisService;
 import com.unlock.api.domain.couple.entity.Couple;
 import com.unlock.api.domain.couple.repository.CoupleRepository;
-import com.unlock.api.domain.question.entity.CoupleQuestion;
 import com.unlock.api.domain.question.entity.Question;
 import com.unlock.api.domain.question.repository.CoupleQuestionRepository;
-import com.unlock.api.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 정해진 시간에 질문을 자동으로 배정하고 사용자별 맞춤 알림을 트리거하는 스케줄러
@@ -33,6 +32,7 @@ public class QuestionScheduler {
     private final RedisService redisService;
     private final CoupleQuestionRepository coupleQuestionRepository;
     private final AnswerRepository answerRepository;
+    private final FcmService fcmService;
 
     @Scheduled(cron = "0 * * * * *")
     public void scheduleDailyQuestions() {
@@ -44,13 +44,11 @@ public class QuestionScheduler {
             return;
         }
 
-        List<Couple> targetCouples = coupleRepository.findAllByNotificationTime(targetTime);
-        if (targetCouples.isEmpty()) return;
-
-        log.info("[스케줄러] {}쌍의 커플 알림 처리 시작 (타겟: {})", targetCouples.size(), targetTime);
-
-        // 2. 해당 시간이 알림 시간인 커플 조회 (User 정보까지 fetch join으로 한 번에 조회)
+        // 해당 시간이 알림 시간인 커플 조회 (User 정보까지 fetch join으로 한 번에 조회)
         List<Couple> targetCouplesFetch = coupleRepository.findAllByNotificationTimeWithUsers(targetTime);
+        if (targetCouplesFetch.isEmpty()) return;
+
+        log.info("[스케줄러] {}쌍의 커플 알림 처리 시작 (타겟: {})", targetCouplesFetch.size(), targetTime);
 
         for (Couple couple : targetCouplesFetch) {
             try {
@@ -73,18 +71,17 @@ public class QuestionScheduler {
 
                 // [Case 1] 오늘 처음 질문이 배정되었거나 이동해온 경우 (둘 다 안 썼을 확률 높음)
                 if (isNewQuestionDay && !user1Finished && !user2Finished) {
-                    sendNotification(couple.getUser1(), "오늘의 새로운 질문이 도착했습니다! 🔓");
-                    sendNotification(couple.getUser2(), "오늘의 새로운 질문이 도착했습니다! 🔓");
+                    fcmService.sendToUser(couple.getUser1(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.", NotificationType.DAILY_QUESTION);
+                    fcmService.sendToUser(couple.getUser2(), "un:lock 🔓", "오늘의 새로운 질문이 도착했습니다! 확인해 보세요.", NotificationType.DAILY_QUESTION);
                 } 
-                // [Case 2] 리마인드 상황 (안 한 사람에게만 발송)
                 else {
                     if (!user1Finished) {
                         String msg = user2Finished ? "파트너가 답변을 기다리고 있어요! 🔓" : "아직 오늘의 질문에 답변하지 않으셨어요! 🔔";
-                        sendNotification(couple.getUser1(), msg);
+                        fcmService.sendToUser(couple.getUser1(), "un:lock 🔔", msg, NotificationType.DAILY_QUESTION);
                     }
                     if (!user2Finished) {
                         String msg = user1Finished ? "파트너가 답변을 기다리고 있어요! 🔓" : "아직 오늘의 질문에 답변하지 않으셨어요! 🔔";
-                        sendNotification(couple.getUser2(), msg);
+                        fcmService.sendToUser(couple.getUser2(), "un:lock 🔔", msg, NotificationType.DAILY_QUESTION);
                     }
                 }
                 
@@ -92,13 +89,5 @@ public class QuestionScheduler {
                 log.error("[스케줄러 에러] 커플(ID:{}) 처리 실패: {}", couple.getId(), e.getMessage());
             }
         }
-    }
-
-    /**
-     * 실제 푸시 알림 발송 로직 (추후 FCM 연동 지점)
-     */
-    private void sendNotification(User user, String message) {
-        // TODO: FCMService.send(user.getFcmToken(), message);
-        log.info("[알림 발송] 유저(ID:{}, Nick:{})님에게 메시지 전송: {}", user.getId(), user.getNickname(), message);
     }
 }
