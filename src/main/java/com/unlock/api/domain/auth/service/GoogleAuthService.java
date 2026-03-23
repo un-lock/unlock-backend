@@ -111,7 +111,7 @@ public class GoogleAuthService implements SocialAuthService {
             }
 
             String refreshToken = (String) body.get("refresh_token");
-            log.info("[GOOGLE] serverAuthCode → refresh_token 교환 성공");
+            log.debug("[GOOGLE] serverAuthCode → refresh_token 교환 성공");
             return refreshToken;
 
         } catch (Exception e) {
@@ -125,17 +125,17 @@ public class GoogleAuthService implements SocialAuthService {
     @Override
     public void unlink(String googleRefreshToken) {
         if (googleRefreshToken == null || googleRefreshToken.isBlank()) {
-            log.info("[GOOGLE] googleRefreshToken이 없어 revoke를 건너뜁니다.");
+            log.debug("[GOOGLE] googleRefreshToken이 없어 revoke를 건너뜁니다.");
             return;
         }
 
         try {
             String url = GOOGLE_REVOKE_URL + "?token=" + googleRefreshToken;
             restTemplate.postForEntity(url, null, String.class);
-            log.info("[GOOGLE] 연동 해제(revoke) 성공");
+            log.debug("[GOOGLE] 연동 해제(revoke) 성공");
         } catch (Exception e) {
             // 클라이언트에서 revokeAccess()를 먼저 호출하므로, 서버 도달 시 이미 취소된 토큰일 수 있음
-            log.info("[GOOGLE] 연동 해제(revoke) 스킵 - 이미 클라이언트에서 취소되었거나 취소 불가 토큰: {}", e.getMessage());
+            log.debug("[GOOGLE] 연동 해제(revoke) 스킵 - 이미 클라이언트에서 취소되었거나 취소 불가 토큰: {}", e.getMessage());
         }
     }
 

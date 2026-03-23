@@ -38,8 +38,8 @@ public class AdmobSsvController {
             HttpServletRequest request) {
 
         String rawQueryString = request.getQueryString();
-        log.info("[SSV] 콜백 수신 - transactionId: {}", params.get("transaction_id"));
-        log.info("[SSV] rawQueryString: {}", rawQueryString);
+        log.debug("[SSV] 콜백 수신 - transactionId: {}", params.get("transaction_id"));
+        log.debug("[SSV] rawQueryString: {}", rawQueryString);
 
         try {
             admobSsvService.processSsvCallback(rawQueryString, params);

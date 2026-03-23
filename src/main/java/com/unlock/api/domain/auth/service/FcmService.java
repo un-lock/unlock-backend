@@ -64,7 +64,7 @@ public class FcmService {
 
         try {
             FirebaseMessaging.getInstance().sendEach(messages);
-            log.info("[FCM] Silent Push {} 건 발송 완료 (Type: {})", tokens.size(), type);
+            log.debug("[FCM] Silent Push {} 건 발송 완료 (Type: {})", tokens.size(), type);
         } catch (Exception e) {
             log.error("[FCM] Silent Push 발송 에러: {}", e.getMessage());
         }
@@ -93,7 +93,7 @@ public class FcmService {
 
         try {
             FirebaseMessaging.getInstance().sendEach(messages);
-            log.info("[FCM] Silent Push {} 건 발송 완료 (Type: {}, data: {})", tokens.size(), type, extraData);
+            log.debug("[FCM] Silent Push {} 건 발송 완료 (Type: {}, data: {})", tokens.size(), type, extraData);
         } catch (Exception e) {
             log.error("[FCM] Silent Push 발송 에러: {}", e.getMessage());
         }
@@ -119,7 +119,7 @@ public class FcmService {
 
         try {
             FirebaseMessaging.getInstance().sendEach(messages);
-            log.info("[FCM] {} 건 발송 완료 (Type: {})", targetTokens.size(), type);
+            log.debug("[FCM] {} 건 발송 완료 (Type: {})", targetTokens.size(), type);
         } catch (Exception e) {
             log.error("[FCM] 발송 에러: {}", e.getMessage());
         }

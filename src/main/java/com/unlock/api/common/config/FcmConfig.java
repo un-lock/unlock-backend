@@ -29,7 +29,7 @@ public class FcmConfig {
                         .build();
 
                 FirebaseApp.initializeApp(options);
-                log.info("FCM 초기화 성공");
+                log.debug("FCM 초기화 성공");
             }
         } catch (Exception e) {
             log.error("FCM 초기화 실패: {}", e.getMessage());

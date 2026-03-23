@@ -84,7 +84,7 @@ public class KakaoAuthService implements SocialAuthService {
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(KAKAO_UNLINK_URL, request, String.class);
             if (response.getStatusCode() == HttpStatus.OK) {
-                log.info("[KAKAO] 연결 끊기 성공 - socialId: {}", socialId);
+                log.debug("[KAKAO] 연결 끊기 성공 - socialId: {}", socialId);
             } else {
                 log.warn("[KAKAO] 연결 끊기 응답 이상 - status: {}, body: {}", response.getStatusCode(), response.getBody());
             }

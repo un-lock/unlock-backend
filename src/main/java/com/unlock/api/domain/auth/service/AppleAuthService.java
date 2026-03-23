@@ -137,7 +137,7 @@ public class AppleAuthService implements SocialAuthService {
             }
 
             String refreshToken = (String) body.get("refresh_token");
-            log.info("[APPLE] authorizationCode → refresh_token 교환 성공");
+            log.debug("[APPLE] authorizationCode → refresh_token 교환 성공");
             return refreshToken;
 
         } catch (Exception e) {
@@ -170,7 +170,7 @@ public class AppleAuthService implements SocialAuthService {
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
             restTemplate.postForEntity(APPLE_REVOKE_URL, request, String.class);
 
-            log.info("[APPLE] 연동 해제(revoke) 성공");
+            log.debug("[APPLE] 연동 해제(revoke) 성공");
 
         } catch (Exception e) {
             // 탈퇴 흐름 자체를 막지 않기 위해 예외를 던지지 않고 로그만 남김

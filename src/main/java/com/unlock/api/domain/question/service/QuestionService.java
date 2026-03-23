@@ -82,7 +82,7 @@ public class QuestionService {
             boolean user2Finished = answerRepository.existsByUserAndQuestion(couple.getUser2(), last.getQuestion());
 
             if (!(user1Finished && user2Finished)) {
-                log.info("[SCHEDULE] 커플(ID:{}) 미완료 질문 발견 -> 날짜를 {}로 이월", couple.getId(), today);
+                log.debug("[SCHEDULE] 커플(ID:{}) 미완료 질문 발견 -> 날짜를 {}로 이월", couple.getId(), today);
                 last.updateAssignedDate(today);
                 return last.getQuestion();
             }
@@ -114,7 +114,7 @@ public class QuestionService {
         couple.initCycle(sweetDay);
         couple.advanceCycle(1, sweetDay);
 
-        log.info("[COUPLE_CREATED] 커플(ID:{}) 첫 SPICY 질문 배정 완료 — questionId={}, sweetDay={}",
+        log.debug("[COUPLE_CREATED] 커플(ID:{}) 첫 SPICY 질문 배정 완료 — questionId={}, sweetDay={}",
                 couple.getId(), firstQuestion.getId(), sweetDay);
         return firstQuestion;
     }
@@ -142,7 +142,7 @@ public class QuestionService {
         int newSweetDay = (nextDay == 5) ? ThreadLocalRandom.current().nextInt(1, 6) : currentSweetDay;
         couple.advanceCycle(nextDay, newSweetDay);
 
-        log.info("[SCHEDULE] 커플(ID:{}) 사이클 day={}/{} 질문 배정 — category={}, questionId={}",
+        log.debug("[SCHEDULE] 커플(ID:{}) 사이클 day={}/{} 질문 배정 — category={}, questionId={}",
                 couple.getId(), nextDay, currentSweetDay, question.getCategory(), question.getId());
         return question;
     }

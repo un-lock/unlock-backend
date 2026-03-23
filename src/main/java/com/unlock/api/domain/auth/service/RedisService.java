@@ -23,7 +23,7 @@ public class RedisService {
     public void saveVerificationCode(String email, String code) {
         String key = "AUTH:" + email;
         redisTemplate.opsForValue().set(key, code, 3, TimeUnit.MINUTES);
-        log.info("Redis 저장 완료 - Key: {}, Value: {}", key, code);
+        log.debug("Redis 저장 완료 - Key: {}", key);
     }
 
     /**
@@ -46,7 +46,7 @@ public class RedisService {
     public void saveRefreshToken(Long userId, String refreshToken, long expirationTime) {
         String key = "RT:" + userId;
         redisTemplate.opsForValue().set(key, refreshToken, expirationTime, TimeUnit.MILLISECONDS);
-        log.info("Redis RefreshToken 저장 완료 - Key: {}", key);
+        log.debug("Redis RefreshToken 저장 완료 - Key: {}", key);
     }
 
     /**

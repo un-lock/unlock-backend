@@ -43,7 +43,7 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         user.updateNickname(request.getNickname());
-        log.info("유저(ID:{}) 닉네임 변경 완료: {}", userId, request.getNickname());
+        log.debug("유저(ID:{}) 닉네임 변경 완료: {}", userId, request.getNickname());
         return user.getNickname();
     }
 
@@ -61,7 +61,7 @@ public class UserService {
 
         // 2. 새로운 비밀번호 암호화 및 저장
         user.updatePassword(passwordEncoder.encode(request.getNewPassword()));
-        log.info("유저(ID:{}) 비밀번호 변경 완료", userId);
+        log.debug("유저(ID:{}) 비밀번호 변경 완료", userId);
     }
 
     /**

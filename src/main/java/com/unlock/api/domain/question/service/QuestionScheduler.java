@@ -48,7 +48,7 @@ public class QuestionScheduler {
         List<Couple> targetCouplesFetch = coupleRepository.findAllByNotificationTimeWithUsers(targetTime);
         if (targetCouplesFetch.isEmpty()) return;
 
-        log.info("[스케줄러] {}쌍의 커플 알림 처리 시작 (타겟: {})", targetCouplesFetch.size(), targetTime);
+        log.debug("[스케줄러] {}쌍의 커플 알림 처리 시작 (타겟: {})", targetCouplesFetch.size(), targetTime);
 
         for (Couple couple : targetCouplesFetch) {
             try {
@@ -65,7 +65,7 @@ public class QuestionScheduler {
 
                 // 4. 상황별 타겟 알림 발송
                 if (user1Finished && user2Finished) {
-                    log.info("[SKIP] 커플(ID:{}) - 두 분 모두 답변을 완료하여 알림을 보내지 않습니다.", couple.getId());
+                    log.debug("[SKIP] 커플(ID:{}) - 두 분 모두 답변을 완료하여 알림을 보내지 않습니다.", couple.getId());
                     continue;
                 }
 

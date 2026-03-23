@@ -73,7 +73,7 @@ public class AdmobSsvService {
 
         // 2. 중복 처리 방지
         if (redisService.isAdmobTransactionProcessed(transactionId)) {
-            log.info("[SSV] 이미 처리된 transaction_id: {}", transactionId);
+            log.debug("[SSV] 이미 처리된 transaction_id: {}", transactionId);
             return;
         }
 
@@ -87,7 +87,7 @@ public class AdmobSsvService {
         // Google은 URL 디코딩된 메시지에 서명함
         String message = URLDecoder.decode(rawQueryString.substring(0, signatureIndex), StandardCharsets.UTF_8);
         long keyId = Long.parseLong(keyIdStr);
-        log.info("[SSV] 서명 검증 대상 message: {}", message);
+        log.debug("[SSV] 서명 검증 대상 message: {}", message);
 
         if (!verifySignature(message, keyId, signatureB64)) {
             log.warn("[SSV] 서명 검증 실패 - transactionId: {}", transactionId);
@@ -177,7 +177,7 @@ public class AdmobSsvService {
             keyCache.clear();
             keyCache.putAll(newCache);
             keyCachedAt = System.currentTimeMillis();
-            log.info("[SSV] Google 공개키 캐시 갱신 완료 - {} 개", newCache.size());
+            log.debug("[SSV] Google 공개키 캐시 갱신 완료 - {} 개", newCache.size());
 
         } catch (Exception e) {
             log.error("[SSV] Google 공개키 로드 실패: {}", e.getMessage());
