@@ -1,6 +1,6 @@
 # 🔓 un:lock (언락) - 프라이빗 커플 상호작용 플랫폼 (Backend)
 
-> **"두 사람 모두 답변을 완료해야 열리는 상대방의 진심"**  
+> **"두 사람 모두 답변을 완료해야 열리는 상대방의 진심"**
 > un:lock은 커플들이 매일 제공되는 질문에 답변하며 서로의 깊은 가치관을 알아가는 서비스입니다. 단순히 기능을 구현하는 것을 넘어, **실제 상용 서비스 수준의 성능 최적화, 보안 계층 구축, 그리고 인프라 자동화**를 목표로 설계되었습니다.
 
 ---
@@ -34,6 +34,11 @@
 - **지능형 라우팅**: 알림의 `Data Payload`에 **`NotificationType`**(Enum)을 포함하여, 앱이 알림 수신 시 종류에 따라 적절한 화면으로 이동할 수 있도록 설계했습니다.
 - **비동기 처리**: `@Async`를 활용하여 알림 발송이 메인 비즈니스 로직의 응답 속도에 영향을 주지 않도록 격리했습니다.
 
+### 📺 4. 광고 보상 Server-Side Verification (AdMob SSV)
+- **문제**: 클라이언트에서 광고 시청 완료를 직접 서버에 보고할 경우, 앱 조작으로 광고 없이 콘텐츠를 무료 열람하는 취약점이 존재합니다.
+- **해결**: Google이 직접 서버 엔드포인트를 호출하는 **AdMob SSV(Server-Side Verification)** 를 구현했습니다. Google 공개키(ECDSA)로 서명을 검증하고, Redis로 `transaction_id` 중복 처리를 방지합니다.
+- **UX**: 검증 완료 후 FCM **Silent Push**를 통해 앱이 트레이 알림 없이 조용히 화면을 갱신하도록 설계했습니다.
+
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
@@ -41,7 +46,8 @@
 - **Backend**: `Java 21`, `Spring Boot 3.3.4`, `Spring Security`, `Spring Data JPA`
 - **Query**: `Querydsl 5.0.0 (Jakarta)`, `PostgreSQL 16`
 - **Infra**: `Nginx`, `Docker & Docker Compose`, `GitHub Actions`, `Redis 7`
-- **Auth**: `JWT (jjwt 0.12.6)`, `OAuth2 (Kakao)`, `BCrypt`
+- **Auth**: `JWT (jjwt 0.12.6)`, `Kakao OAuth2`, `Apple Sign In`, `Google OAuth2`, `BCrypt`
+- **Push**: `Firebase Admin SDK (FCM)` - Silent Push, 다중 기기 비동기 발송
 - **Docs**: `Swagger (OpenAPI 3.0)` - 명시적 응답 매핑 및 실전 예시 데이터(@Schema) 제공
 
 ---
@@ -59,6 +65,7 @@
 ```mermaid
 erDiagram
     USERS ||--o| COUPLES : "belongs_to"
+    USERS ||--o{ USER_FCM_TOKENS : "has"
     COUPLES ||--o{ COUPLE_QUESTIONS : "daily_assignment"
     QUESTIONS ||--o{ COUPLE_QUESTIONS : "referenced"
     USERS ||--o{ ANSWERS : "writes"
@@ -71,17 +78,28 @@ erDiagram
         string email UK "이메일"
         string nickname "닉네임"
         string invite_code UK "초대코드"
+        string auth_provider "EMAIL / KAKAO / APPLE / GOOGLE"
         long couple_id FK "커플 ID"
+    }
+    USER_FCM_TOKENS {
+        long id PK
+        long user_id FK "유저 ID"
+        string token "FCM 토큰"
+        datetime last_used_at "마지막 사용 시각"
     }
     COUPLES {
         long id PK "커플 고유 ID"
         long user1_id FK "유저1 ID"
         long user2_id FK "유저2 ID"
         boolean is_subscribed "구독 여부"
+        boolean is_hot_spicy_enabled "HOT_SPICY 모드 여부"
         time notification_time "알림 시간"
+        date anniversary_date "사귄 날짜"
+        int question_cycle_day "현재 사이클 일차 (1~5)"
+        int question_sweet_day "이번 사이클 SWEET 배정 일차"
     }
     ANSWERS {
         long id PK "답변 고유 ID"
-        text content "암호화된 답변 내용"
+        text content "AES-256 암호화된 답변 내용"
     }
 ```
