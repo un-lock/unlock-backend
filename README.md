@@ -95,8 +95,6 @@ erDiagram
         boolean is_hot_spicy_enabled "HOT_SPICY 모드 여부"
         time notification_time "알림 시간"
         date anniversary_date "사귄 날짜"
-        int question_cycle_day "현재 사이클 일차 (1~5)"
-        int question_sweet_day "이번 사이클 SWEET 배정 일차"
     }
     ANSWERS {
         long id PK "답변 고유 ID"
