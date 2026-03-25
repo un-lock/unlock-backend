@@ -6,16 +6,13 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.unlock.api.domain.question.entity.QCoupleQuestion;
 import com.unlock.api.domain.question.entity.QQuestion;
 import com.unlock.api.domain.question.entity.Question;
-import com.unlock.api.domain.question.entity.QuestionCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
  * QuestionRepositoryCustom의 구현체
- * Querydsl을 사용하여 복잡한 랜덤 추출 로직을 Type-safe하게 처리합니다.
  */
 @Repository
 @RequiredArgsConstructor
@@ -39,46 +36,6 @@ public class QuestionRepositoryImpl implements QuestionRepositoryCustom {
         Question result = queryFactory
                 .selectFrom(question)
                 .where(question.id.notIn(assignedQuestionIds))
-                .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
-                .fetchFirst();
-
-        return Optional.ofNullable(result);
-    }
-
-    @Override
-    public Optional<Question> findRandomQuestionNotAssignedToCoupleByCategory(Long coupleId, QuestionCategory category) {
-        QQuestion question = QQuestion.question;
-        QCoupleQuestion coupleQuestion = QCoupleQuestion.coupleQuestion;
-
-        var assignedQuestionIds = JPAExpressions
-                .select(coupleQuestion.question.id)
-                .from(coupleQuestion)
-                .where(coupleQuestion.couple.id.eq(coupleId));
-
-        Question result = queryFactory
-                .selectFrom(question)
-                .where(question.id.notIn(assignedQuestionIds)
-                        .and(question.category.eq(category)))
-                .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
-                .fetchFirst();
-
-        return Optional.ofNullable(result);
-    }
-
-    @Override
-    public Optional<Question> findRandomQuestionNotAssignedToCoupleByCategories(Long coupleId, List<QuestionCategory> categories) {
-        QQuestion question = QQuestion.question;
-        QCoupleQuestion coupleQuestion = QCoupleQuestion.coupleQuestion;
-
-        var assignedQuestionIds = JPAExpressions
-                .select(coupleQuestion.question.id)
-                .from(coupleQuestion)
-                .where(coupleQuestion.couple.id.eq(coupleId));
-
-        Question result = queryFactory
-                .selectFrom(question)
-                .where(question.id.notIn(assignedQuestionIds)
-                        .and(question.category.in(categories)))
                 .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
                 .fetchFirst();
 
