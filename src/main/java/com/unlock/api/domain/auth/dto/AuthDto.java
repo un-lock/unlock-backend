@@ -151,5 +151,8 @@ public class AuthDto {
         
         @Schema(description = "커플 연결 여부", example = "false")
         private Boolean isCoupleConnected;
+
+        @Schema(description = "소셜 신규 가입 여부 (true면 닉네임 설정 화면으로 이동)", example = "false")
+        private Boolean isNewUser;
     }
 }

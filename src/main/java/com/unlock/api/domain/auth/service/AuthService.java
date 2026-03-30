@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -128,25 +129,28 @@ public class AuthService {
         User user = userRepository.findBySocialIdAndProvider(profile.getSocialId(), profile.getProvider())
                 .orElse(null);
 
+        boolean isNewUser = false;
+
         // 2. 소셜 연동 사용자가 없다면, 이메일로 기존 계정 찾기 (통합 시도)
         if (user == null) {
-            user = userRepository.findByEmail(profile.getEmail())
-                    .map(existingUser -> {
-                        // 기존 계정에 소셜 정보를 연결 (통합)
-                        existingUser.updateSocialInfo(profile.getSocialId(), profile.getProvider());
-                        return userRepository.save(existingUser);
-                    })
-                    .orElseGet(() -> {
-                        // 아예 신규 가입 (소셜 가입은 랜덤 패스워드 설정)
-                        return userRepository.save(User.builder()
-                                .socialId(profile.getSocialId())
-                                .email(profile.getEmail())
-                                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                                .nickname(profile.getNickname())
-                                .provider(profile.getProvider())
-                                .inviteCode(generateInviteCode())
-                                .build());
-                    });
+            Optional<User> existingUserOpt = userRepository.findByEmail(profile.getEmail());
+            if (existingUserOpt.isPresent()) {
+                // 기존 계정에 소셜 정보를 연결 (통합)
+                user = existingUserOpt.get();
+                user.updateSocialInfo(profile.getSocialId(), profile.getProvider());
+                user = userRepository.save(user);
+            } else {
+                // 아예 신규 가입 (소셜 가입은 랜덤 패스워드 설정)
+                isNewUser = true;
+                user = userRepository.save(User.builder()
+                        .socialId(profile.getSocialId())
+                        .email(profile.getEmail())
+                        .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                        .nickname(profile.getNickname())
+                        .provider(profile.getProvider())
+                        .inviteCode(generateInviteCode())
+                        .build());
+            }
         }
 
         // [Apple/Google 전용] authorizationCode → refresh_token 교환 후 저장 (탈퇴 시 revoke에 사용)
@@ -168,7 +172,7 @@ public class AuthService {
             handleFcmToken(user, request.getFcmToken());
         }
 
-        return createTokenResponse(user);
+        return createTokenResponse(user, isNewUser);
     }
 
     /**
@@ -250,17 +254,23 @@ public class AuthService {
         private String refreshToken;
         private String nickname;
         private boolean isCoupleConnected;
+        private boolean isNewUser;
 
         public TokenResponse toTokenResponse() {
             return TokenResponse.builder()
                     .accessToken(accessToken)
                     .nickname(nickname)
                     .isCoupleConnected(isCoupleConnected)
+                    .isNewUser(isNewUser)
                     .build();
         }
     }
 
     private LoginDto createTokenResponse(User user) {
+        return createTokenResponse(user, false);
+    }
+
+    private LoginDto createTokenResponse(User user, boolean isNewUser) {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
@@ -271,6 +281,7 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .nickname(user.getNickname())
                 .isCoupleConnected(user.getCouple() != null)
+                .isNewUser(isNewUser)
                 .build();
     }
 
