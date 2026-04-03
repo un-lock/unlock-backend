@@ -6,6 +6,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.unlock.api.domain.question.entity.QCoupleQuestion;
 import com.unlock.api.domain.question.entity.QQuestion;
 import com.unlock.api.domain.question.entity.Question;
+import com.unlock.api.domain.question.entity.QuestionCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -21,7 +22,7 @@ public class QuestionRepositoryImpl implements QuestionRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Optional<Question> findRandomQuestionNotAssignedToCouple(Long coupleId) {
+    public Optional<Question> findRandomQuestionNotAssignedToCouple(Long coupleId, boolean isHotSpicyEnabled) {
         QQuestion question = QQuestion.question;
         QCoupleQuestion coupleQuestion = QCoupleQuestion.coupleQuestion;
 
@@ -32,10 +33,14 @@ public class QuestionRepositoryImpl implements QuestionRepositoryCustom {
                 .where(coupleQuestion.couple.id.eq(coupleId));
 
         // 2. 메인쿼리: 배정되지 않은 질문들 중 랜덤으로 1개 추출
-        // DB의 random() 함수를 호출하여 무작위 정렬 후 첫 번째 항목을 가져옵니다.
+        var whereClause = question.id.notIn(assignedQuestionIds);
+        if (!isHotSpicyEnabled) {
+            whereClause = whereClause.and(question.category.ne(QuestionCategory.HOT_SPICY));
+        }
+
         Question result = queryFactory
                 .selectFrom(question)
-                .where(question.id.notIn(assignedQuestionIds))
+                .where(whereClause)
                 .orderBy(Expressions.numberTemplate(Double.class, "function('random')").asc())
                 .fetchFirst();
 

@@ -93,7 +93,7 @@ public class QuestionService {
      * 커플 첫 생성 시 호출 — 전체 풀에서 랜덤 질문 배정
      */
     public Question assignFirstQuestionToCouple(Couple couple) {
-        Question firstQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+        Question firstQuestion = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId(), couple.isHotSpicyEnabled())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         CoupleQuestion newAssignment = CoupleQuestion.builder()
@@ -108,7 +108,7 @@ public class QuestionService {
     }
 
     private Question assignRandomQuestion(Couple couple, LocalDate date) {
-        Question question = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId())
+        Question question = questionRepository.findRandomQuestionNotAssignedToCouple(couple.getId(), couple.isHotSpicyEnabled())
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
 
         CoupleQuestion newAssignment = CoupleQuestion.builder()
