@@ -255,6 +255,7 @@ public class AuthService {
         private String nickname;
         private boolean isCoupleConnected;
         private boolean isNewUser;
+        private AuthProvider provider;
 
         public TokenResponse toTokenResponse() {
             return TokenResponse.builder()
@@ -262,6 +263,7 @@ public class AuthService {
                     .nickname(nickname)
                     .isCoupleConnected(isCoupleConnected)
                     .isNewUser(isNewUser)
+                    .provider(provider)
                     .build();
         }
     }
@@ -282,6 +284,7 @@ public class AuthService {
                 .nickname(user.getNickname())
                 .isCoupleConnected(user.getCouple() != null)
                 .isNewUser(isNewUser)
+                .provider(user.getProvider())
                 .build();
     }
 
