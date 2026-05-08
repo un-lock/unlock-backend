@@ -3,7 +3,9 @@
 > **"두 사람 모두 답변을 완료해야 열리는 상대방의 진심"**  
 > 커플이 매일 질문에 답변하고, 상대방의 답변을 unlock하는 소통 서비스입니다.
 
-- **Production**: [api.unlock-official.app](https://api.unlock-official.app)
+- **Google Play**: [play.google.com/store/apps/details?id=com.unlock.app](https://play.google.com/store/apps/details?id=com.unlock.app)
+- **App Store**: [apps.apple.com/kr/app/un-lock/id6760801534](https://apps.apple.com/kr/app/un-lock/id6760801534)
+- **Production API**: [api.unlock-official.app](https://api.unlock-official.app)
 - **API Docs (dev)**: [dev-api.unlock-official.app/swagger-ui/index.html](https://dev-api.unlock-official.app/swagger-ui/index.html) _(Basic Auth 보호 — 검토 요청 시 계정 제공)_
 
 ---
